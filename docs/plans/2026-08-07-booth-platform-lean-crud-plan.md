@@ -7,10 +7,19 @@
 - Updated: 2026-08-09
 - Implementation skill: `$build-lean-crud`
 - Source precedence: `안건정리_20260801_1653 .txt`의 최신 합의가 엑셀 초안 및 프로토타입과 충돌하면 우선한다.
+- Approval: 기능 범위, 기술 구성, 2단계 구현 설계와 제한된 의존성 목록은 2026-08-09 사용자 승인 완료 상태다.
 
 ## Validation goal
 
 관리자가 행사를 공개하고, 크리에이터가 승인된 부스와 상품을 등록하며, 팬이 상품을 예약한 뒤 크리에이터가 현장 수령 또는 POS 판매를 기록하고, 그 결과와 통합 재고가 재접속 후에도 유지되는 하나의 정상 흐름을 실제 화면에서 확인한다.
+
+## Repository baseline
+
+- 2026-08-09 `develop` 브랜치에는 `README.md`, `.gitignore`, 계획 문서와 역기획 분석 문서만 있다.
+- React `package.json`, `src`, Vite 설정, 컴포넌트, 상태 관리, API 클라이언트, 폼, CSS, 라우팅, 오류 처리, 프런트엔드 테스트 설정은 아직 없다.
+- Java·Gradle·Spring Boot 소스와 테스트 설정, DB 스키마도 아직 없다.
+- 따라서 따를 수 있는 기존 React 구현 관례는 없으며, 아래 구현 방식은 승인된 스택 안에서 추가 라이브러리를 사용하지 않는 최소 제안이다.
+- 역기획 근거는 `docs/analysis/2026-08-09-prototype-reverse-analysis.md`를 사용한다. 프로토타입 화면 전체를 소스 코드로 복사하거나 전체 라우트로 재현하지 않는다.
 
 ## Users and ownership
 
@@ -69,6 +78,122 @@
 - 캐시, 백그라운드 작업, 이벤트 시스템, 성능 최적화, 미래용 추상화
 - 프로토타입에만 존재하고 이 계획의 포함 범위에 없는 화면과 기능
 
+## Implementation conventions
+
+### Folder structure
+
+현재 저장소에 기존 구조가 없으므로 다음 최소 모노레포 구조를 제안한다. 구현 과정에서 범위 밖 계층이나 공용 패키지를 추가하지 않는다.
+
+```text
+BoothHana/
+├─ frontend/
+│  ├─ src/
+│  │  ├─ app/                 # App 진입, 라우트 표, 인증 컨텍스트
+│  │  ├─ pages/               # public, auth, creator, admin 화면
+│  │  ├─ components/
+│  │  │  ├─ layout/           # 헤더, 역할 내비게이션, 페이지 골격
+│  │  │  └─ ui/               # 버튼, 필드, 상태 칩, 표, 로딩/빈/오류 상태
+│  │  ├─ features/            # event, booth, product, reservation, pos, notice
+│  │  ├─ api/                 # fetch 기반 TypeScript client와 기능별 요청 함수
+│  │  └─ styles/              # tokens.css, global.css, 화면별 CSS
+│  └─ public/
+├─ backend/
+│  └─ src/
+│     ├─ main/java/.../       # auth, event, booth, product, reservation, pos, notice, upload
+│     ├─ main/resources/      # application 설정
+│     └─ test/java/.../       # 승인 범위 정상 흐름의 최소 백엔드 테스트
+├─ database/                  # Supabase PostgreSQL에 적용할 순서 있는 SQL
+└─ docs/
+```
+
+- 기능 폴더에는 그 기능에서만 쓰는 화면 조각과 API 함수를 둔다.
+- 두 개 이상의 기능에서 실제로 반복되는 UI만 `components/ui`로 올린다.
+- 백엔드는 도메인별 controller/service/repository/entity/DTO를 같은 도메인 패키지에 둔다. 별도 멀티모듈이나 범용 계층은 만들지 않는다.
+
+### Component style
+
+- TypeScript 함수형 React 컴포넌트와 Hooks를 사용한다.
+- `pages`는 라우트 데이터 로딩과 화면 조합을 담당하고, 입력·표시 조각은 기능 또는 공통 컴포넌트로 분리한다.
+- 프로토타입에서 반복 확인된 `PublicHeader`, `RoleHeader`, `SideNav`, `PageHeader`, `Button`, `StatusChip`, `FormField`, `DataTable`, `LoadingState`, `EmptyState`, `ErrorState`만 초기 공통 후보로 둔다.
+- `EventCard`, `BoothCard`, `ProductCard`, `ReservationTicket`, `StockDisplay`는 해당 도메인의 반복이 확인될 때 기능 컴포넌트로 만든다.
+- 한 번만 쓰는 작은 화면 조각은 공통화하지 않는다.
+
+### State management
+
+- 새 전역 상태 라이브러리를 추가하지 않는다.
+- 입력값, 로딩, 오류, 선택 상태는 각 페이지 또는 기능 컴포넌트의 `useState`와 필요 시 `useReducer`로 관리한다.
+- 로그인 사용자와 역할만 `AuthContext`로 공유한다.
+- 서버에서 다시 가져올 수 있는 행사·부스·상품·예약 목록은 전역 캐시에 복제하지 않고 화면 진입 시 API로 조회한다.
+- 목록 변경 후에는 낙관적 업데이트 체계를 만들지 않고 저장 성공 후 해당 목록을 다시 조회한다.
+
+### API calls
+
+- 새 HTTP 클라이언트 라이브러리를 추가하지 않고 브라우저 `fetch`를 사용한다.
+- `frontend/src/api/client.ts`에서 API 기본 URL, JSON 변환, 쿠키 포함, 공통 오류 변환만 처리한다.
+- 기능별 파일은 `eventsApi`, `boothsApi`, `productsApi`, `reservationsApi`, `posApi`, `noticesApi`, `uploadsApi` 정도로 나누고 화면에서 URL 문자열을 직접 반복하지 않는다.
+- Java API는 `/api/public`, `/api/me`, `/api/creator`, `/api/admin` 경로로 공개·소유자·관리자 범위를 구분한다.
+- 오류 응답은 최소한 `status`, `code`, `message`, 선택적 `fieldErrors` 형식으로 통일한다.
+- R2 업로드는 백엔드에서 제한된 업로드 URL과 객체 키를 받은 뒤 브라우저가 R2로 직접 전송하고, 성공한 객체 키만 업무 데이터 저장 API에 전달한다.
+
+### Forms and validation
+
+- 새 폼 또는 스키마 검증 라이브러리를 추가하지 않는다.
+- React controlled input, HTML의 `required`, `type`, `min`, `max`와 기능별 작은 검증 함수를 사용한다.
+- 프런트엔드는 필수값, 음수 가격·수량, 행사 시작/종료 역전, 유한 재고 수량 누락, 이미지 업로드 미완료처럼 정상 흐름을 막는 값만 검증한다.
+- 백엔드는 같은 핵심 규칙을 다시 검증하며 프런트 검증을 신뢰하지 않는다.
+- 제출 중 중복 클릭은 버튼 비활성화로만 줄이고 분산 잠금이나 멱등성 체계는 추가하지 않는다.
+
+### Styling
+
+- 새 CSS 프레임워크, CSS-in-JS, 디자인 시스템 라이브러리를 추가하지 않는다.
+- 프로토타입의 흰색·아이보리 바탕, 갈색 본문, 코럴·청록·금색 상태색, 세리프 제목과 카드·패널 톤을 `tokens.css`와 일반 CSS로 옮긴다.
+- 컴포넌트 클래스는 화면별 CSS에서 직접 사용하며 빌드 시 기본 Vite CSS import를 따른다.
+- 프로토타입의 정확한 픽셀 복제보다 포함 화면의 명확한 이동과 모바일 사용 가능성을 우선한다.
+
+### Routing
+
+- 현재 라우팅 라이브러리가 설치되어 있지 않다.
+- 공개 화면은 `/events`, `/events/:eventId`, `/booths/:eventBoothId`, `/products/:eventProductId`, `/reservations`, `/reservations/:reservationId`를 최소 후보로 한다.
+- 크리에이터 화면은 `/creator/events`, `/creator/booths`, `/creator/event-booths/:id`, `/creator/event-booths/:id/products`, `/creator/reservations`, `/creator/pos`, `/creator/notices`를 최소 후보로 한다.
+- 관리자 화면은 `/admin/events`, `/admin/events/:eventId`, `/admin/applications`를 최소 후보로 한다.
+- 역할 보호는 프런트의 화면 진입 제어와 백엔드의 소유권·관리자 검사를 함께 적용한다.
+- `react-router`는 현재 저장소에 없는 새 라이브러리이므로 사용자 승인 전 추가하지 않는다. 승인하지 않는 경우 브라우저 History API와 작은 라우트 표만으로 구현하되, 이 선택은 구현 전에 확정한다.
+
+### Error handling
+
+- 페이지는 로딩·정상·빈 데이터·오류 상태를 명시적으로 렌더링한다.
+- 폼 저장 오류는 폼 상단 메시지와 해당 필드 오류로 표시하고 입력값을 유지한다.
+- 401은 카카오 로그인 진입 안내, 403은 역할 또는 소유권 없음, 404는 대상 없음, 그 외 오류는 재시도 가능한 공통 오류 상태로 표시한다.
+- 삭제·예약 취소·POS 취소·수령 완료는 최소 확인창을 사용한다.
+- 오류 추적 서비스, 감사 로그, 자동 재시도, 오프라인 큐는 추가하지 않는다.
+
+### Testing and verification
+
+- 현재 프런트·백엔드 테스트 도구가 없으므로 기존 테스트 방식은 따를 수 없다.
+- 사용자가 구현 후 TypeScript와 린트 오류 확인을 요청했으므로 Vite React TypeScript 기본 구성과 그 템플릿 수준의 ESLint 구성만 사용한다.
+- 새 프런트 테스트 라이브러리를 임의로 추가하지 않는다. 프런트는 Vite production build와 실제 브라우저에서 역할별 정상 흐름을 확인한다.
+- 백엔드는 승인된 Spring Boot 기본 테스트 의존성 범위 안에서 핵심 서비스 규칙과 API 정상 흐름만 검증한다. 별도 테스트 프레임워크를 더하지 않는다.
+- 매 구현 단계마다 화면 저장→새로고침→재조회, 다른 소유자 접근 거부, 유한·무한 재고 표시, 취소 재고 규칙을 해당 단계 범위만큼 확인한다.
+- 최종 검증은 Vercel Preview와 Render 스테이징에서 카카오 개발 앱, Supabase PostgreSQL, R2를 연결한 한 개의 정상 시나리오로 수행한다.
+
+### Dependency rule
+
+- 현재 저장소에는 설치된 라이브러리가 하나도 없다.
+- React·React DOM·Vite와 승인된 Spring Boot·Gradle 구성을 시작하는 데 필수인 의존성도 실제 추가 전 목록을 사용자에게 제시한다.
+- 라우팅, QR 생성, R2 서명처럼 표준 기능만으로 직접 구현하는 비용이 큰 항목은 후보 라이브러리·사용 이유·대안·영향을 제시하고 승인을 받은 뒤 추가한다.
+- 상태 관리, HTTP, 폼, 검증, CSS, 프런트 테스트 편의를 위한 라이브러리는 이번 계획에 추가하지 않는다.
+
+구현 시작 전 승인받을 의존성 후보는 다음으로 제한한다. 버전은 승인 후 프로젝트 생성 시점의 상호 호환되는 안정 버전을 확인해 lockfile로 고정하며, 표에 없는 패키지는 다시 승인받는다.
+
+| 구분 | 후보 | 용도와 근거 | 미승인 시 대안 |
+| --- | --- | --- | --- |
+| 프런트 필수 | `react`, `react-dom`, `vite`, `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom` | 승인된 React/Vite TypeScript 프로젝트 골격과 TypeScript 오류 확인. [Vite 공식 React 템플릿](https://v8.vite.dev/guide/) | React TypeScript 구현 불가 |
+| 프런트 필수 | Vite React TypeScript 기본 ESLint 패키지 | 사용자가 요구한 린트 오류 확인. Vite 기본 템플릿 범위를 넘는 규칙·플러그인은 추가하지 않음 | 린트 오류 확인 불가 |
+| 프런트 후보 | `react-router` | 중첩 없는 SPA URL, 뒤로가기, 역할 라우트. [React Router 공식 Vite 설치](https://reactrouter.com/start/data/installation) | History API 기반 최소 라우트 표 |
+| 프런트 후보 | `qrcode` | 예약번호 또는 상세 URL을 표시용 QR 이미지로 생성. [node-qrcode 저장소](https://github.com/soldair/node-qrcode) | QR 제외는 승인 범위와 충돌하며 직접 QR 알고리즘 구현은 하지 않음 |
+| 백엔드 필수 | Spring Boot Web, Data JPA, Validation, OAuth2 Client, 기본 Test starter, PostgreSQL JDBC driver | REST API, Supabase PostgreSQL, 입력 검증, 카카오 OAuth. [Spring OAuth2 Client](https://docs.spring.io/spring-security/reference/servlet/oauth2/), [Spring SQL/JPA](https://docs.spring.io/spring-boot/reference/data/sql.html) | 승인된 Java/Spring/DB/인증 구성을 구현할 수 없음 |
+| 백엔드 후보 | AWS SDK for Java v2 S3·presigner 모듈 | R2의 S3 호환 API로 짧은 PUT 서명 URL 발급. [Cloudflare 공식 Java 예제](https://developers.cloudflare.com/r2/examples/aws/aws-sdk-java/) | AWS Signature V4를 직접 구현해야 하므로 사용하지 않음 |
+
 ## Minimal data
 
 | Field | Purpose | Evidence |
@@ -106,13 +231,12 @@
 
 ## Implementation sequence
 
-1. React 프런트엔드, Java 백엔드, Supabase PostgreSQL 프로젝트 골격과 카카오 로그인, 역할·소유권을 연결하고 프런트엔드 Preview·백엔드 스테이징 배포를 구성한다.
-2. 관리자 행사 CRUD·공개·종료와 크리에이터 부스 CRUD·참가 신청·관리자 승인 흐름을 연결한다.
-3. 기본 상품/행사 상품 CRUD, 이전 상품 복사, 통합 재고·무한 재고·`SOLD OUT`, Cloudflare R2 이미지, 부스 공지를 연결한다.
-4. 팬용 행사·부스·상품 조회와 직접 예약, 예약번호·QR, 내 예약 조회·취소를 구현한다.
-5. 크리에이터 예약 조회·수령 처리와 간단 POS 판매·취소를 통합 재고에 연결한다.
-6. 행사 종료 후 읽기 전용 처리와 프로토타입 기반의 포함 화면 간 이동을 정리한다.
-7. 팬·크리에이터·관리자 정상 흐름과 CRUD·재접속 영속성·명시적 제외 범위를 실제 화면에서 검증하고 멈춘다.
+1. 승인된 최소 의존성으로 `frontend`, `backend`, `database` 골격을 만들고 React Preview·Java 스테이징·Supabase 연결과 카카오 로그인·역할·소유권을 확인한다.
+2. 관리자 행사 CRUD·공개·수동 종료와 크리에이터 기본 부스 CRUD·참가 신청·관리자 승인 흐름을 API와 실제 화면으로 연결한다.
+3. 행사별 부스·상품 CRUD, 이전 상품 복사, 통합 재고·무한 재고·`SOLD OUT`, R2 이미지와 부스 공지를 연결하고 재접속 영속성을 검수한다.
+4. 팬용 행사→부스→상품 조회, 한 부스 직접 예약, 예약번호·QR, 내 예약 조회·취소를 연결하고 예약 전 취소 재고 복구를 검수한다.
+5. 크리에이터 예약번호 검색·수령 완료와 간단 POS 판매·목록·상세·취소를 연결하고 승인된 재고 규칙을 검수한다.
+6. 종료 행사 읽기 전용, 역할별 접근, 로딩·빈·오류 상태와 포함 화면 이동을 정리한 뒤 Vercel Preview·Render 스테이징의 정상 흐름을 검증하고 멈춘다.
 
 ## Developer-autonomous decisions
 
@@ -125,7 +249,7 @@
 
 ## Risks requiring confirmation
 
-None.
+None. 위 표의 필수·후보 의존성과 `react-router` 사용은 2026-08-09 사용자 승인에 포함되었다. 구현 단계에서는 승인된 목록 밖의 패키지를 추가하지 않는다.
 
 ### Implementation inputs already decided in principle
 
@@ -160,6 +284,15 @@ None.
 | D-017 | 프런트엔드는 React, 백엔드는 Java, DB는 Supabase PostgreSQL을 사용한다. | 사용자 결정(2026-08-07) | Next.js 단일 앱과 SQLite; 다른 관계형 DB | 사용자가 기술 스택을 명시했다. | Difficult | user-approved |
 | D-018 | React는 Vite로 빌드해 Vercel Preview에 배포하고, Java는 Spring Boot·Gradle로 구성해 Render 스테이징에 자동 배포한다. | 실시간 개발 확인에 대한 사용자 요청(2026-08-07); Vercel·Render 공식 배포 문서; 사용자 기술 구성 승인(2026-08-09) | Java를 Vercel 커뮤니티 런타임에 배포; Railway/Fly.io 사용 | Vercel 공식 Function 런타임에 Java가 없으므로 프런트엔드와 Java API 배포를 분리한다. | Moderate | user-approved |
 | D-019 | 지정된 카카오 계정 ID만 관리자 역할을 받는다. | 사용자 결정(2026-08-07) | 화면에서 관리자 선택; 별도 관리자 비밀번호 | 일반 사용자의 관리자 역할 획득을 막는 가장 작은 규칙이다. | Moderate | user-approved |
+| D-020 | 기존 React 관례가 없으므로 TypeScript 함수형 컴포넌트·Hooks와 기능 중심의 최소 폴더 구조를 사용한다. | 저장소 조사: `README.md`, 계획·분석 문서 외 React 파일 없음(2026-08-09); 사용자 TypeScript 오류 확인 요청 | 계층형 대규모 구조; JavaScript 사용; 파일을 모두 한 폴더에 배치 | 포함 기능을 구분하되 미래용 추상화를 만들지 않고 정적 오류를 확인한다. | Easy | user-approved |
+| D-021 | 전역 상태 라이브러리 없이 로컬 state와 인증용 Context만 사용한다. | 사용자 요청: 새 라이브러리 임의 추가 금지; 기존 상태 관리 없음 | Redux/Zustand 등 추가; 모든 상태 전역화 | 현재 규모에서 React 기본 기능으로 충분하고 되돌리기 쉽다. | Easy | user-approved |
+| D-022 | API 호출은 브라우저 `fetch`와 작은 공통 client를 사용한다. | 사용자 요청: 새 라이브러리 임의 추가 금지; 기존 API 방식 없음 | Axios 등 추가; 화면마다 직접 fetch | 공통 오류와 쿠키 처리만 모으는 최소 방식이다. | Easy | user-approved |
+| D-023 | 폼은 controlled input·HTML 제약·작은 검증 함수로 구현한다. | 사용자 요청: 새 라이브러리 임의 추가 금지; 기존 폼 방식 없음 | React Hook Form/Zod 등 추가 | 핵심 폼 수와 검증 범위에 맞는 최소 방식이다. | Easy | user-approved |
+| D-024 | 스타일은 프로토타입 톤을 일반 CSS와 토큰 파일로 옮긴다. | 역기획 분석 `docs/analysis/2026-08-09-prototype-reverse-analysis.md`; 기존 스타일 방식 없음 | Tailwind/CSS-in-JS 추가; 디자인 시스템 구축 | 새 의존성 없이 참고 화면의 톤을 재현한다. | Easy | user-approved |
+| D-025 | 프런트 자동 테스트 라이브러리를 추가하지 않고 TypeScript·ESLint·build·브라우저 정상 흐름을 검증한다. | 사용자 요청: TypeScript·린트·브라우저 오류 확인 및 새 라이브러리 임의 추가 금지; 기존 테스트 설정 없음 | Vitest/Testing Library/Playwright 추가 | 요청한 정적·실행 검증을 하면서 별도 테스트 체계를 만들지 않는다. | Easy | user-approved |
+| D-026 | 삭제는 예약·판매가 연결되지 않은 행사의 부스·상품에만 허용하고 연결 기록이 있으면 비공개·종료 상태를 사용한다. | 기존 Assumptions; 데이터 손실 방지 원칙 | 연결 데이터까지 물리 삭제; 전체 soft delete | 대규모 복구 체계 없이 명백한 데이터 손실을 피한다. | Moderate | user-approved |
+| D-027 | 행사 종료는 관리자 수동 상태 변경을 기준으로 하고 종료 시각 자동 작업은 만들지 않는다. | 관리자 종료가 포함된 승인 범위; 백그라운드 작업 명시적 제외 | 종료 시각 자동 전환 | 별도 스케줄러 없이 승인된 종료 흐름을 만족한다. | Easy | user-approved |
+| D-028 | 이전 상품은 이름·설명·이미지를 복사하고 행사별 가격·재고·공개·예약·SOLD OUT 값은 새로 입력한다. | 승인 범위의 기본 상품/행사 상품 분리; 엑셀 초안의 재고·판매 기록 복사 금지 | 이전 가격까지 복사; 모든 행사 값을 복사 | 과거 운영 상태를 새 행사에 잘못 이어받지 않는 최소 규칙이다. | Moderate | user-approved |
 
 ## Assumptions
 
@@ -172,6 +305,8 @@ None.
 - 삭제는 아직 예약·판매 기록이 연결되지 않은 행사·부스·상품·공지에만 제공한다. 연결된 거래 기록은 삭제 대신 상태 변경을 사용한다.
 - 그로스라인 이메일은 추후 제공되며, 제공 시 정적 장애 안내 화면을 포함하도록 이 계획을 다시 Draft로 수정한다.
 - 프로토타입의 75개 안팎 화면 전체는 구현 대상이 아니며, Included scope에 필요한 최소 화면만 재사용하거나 새로 구성한다.
+- 한 카카오 계정은 MVP에서 하나의 역할만 갖고, 지정된 계정은 관리자 역할을 갖는 단일 `User.role` 모델을 사용한다.
+- 서비스 화면 표기명은 별도 확정 전까지 저장소명 `BoothHana2`를 사용하며 쉽게 변경 가능한 표시 문자열로만 둔다.
 
 ## Implementation handoff
 
@@ -192,3 +327,5 @@ Stop when the completion checks pass.
 | 2026-08-07 | 이미지 저장소를 Supabase Storage가 아닌 Cloudflare R2로 선택한 용량 근거를 명시했다. | 사용자가 무료 구간의 10GB 이미지 저장 공간을 R2 선택 이유로 설명했다. |
 | 2026-08-09 | Included scope와 Explicit exclusions 및 관련 결정들을 사용자 승인 상태로 변경했다. | 사용자가 전체 범위를 승인했다. |
 | 2026-08-09 | 기술 구성을 승인하고 계획 상태를 Approved로 변경했다. | 사용자가 React/Vite/Vercel, Spring Boot/Gradle/Render, Supabase PostgreSQL 구성을 승인했다. |
+| 2026-08-09 | 역기획 결과와 현재 빈 저장소를 기준으로 폴더·컴포넌트·상태·API·폼·스타일·라우팅·오류·테스트 방식을 추가하고 Draft로 전환했다. | 사용자가 현재 React 저장소의 관례를 우선한 구현 계획과 새 라이브러리 임의 추가 금지를 요청했다. |
+| 2026-08-09 | 2단계 구현 설계와 제한된 의존성을 승인하고 TypeScript·ESLint 검증 요구를 반영해 Approved로 변경했다. | 사용자가 설계를 승인하고 구현 및 TypeScript·린트 검증을 요청했다. |

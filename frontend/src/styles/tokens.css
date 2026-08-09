@@ -1,0 +1,22 @@
+:root {
+  --bg: #ffffff;
+  --paper: #fffdf8;
+  --soft: #fbf6ed;
+  --ink: #211b16;
+  --muted: #74675d;
+  --line: #ded1bd;
+  --line-strong: #bfae95;
+  --accent: #d85d45;
+  --teal: #13776e;
+  --gold: #d9a72d;
+  --danger: #b84534;
+  --shadow: 0 16px 36px rgba(76, 54, 31, 0.09);
+  --radius: 7px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+}

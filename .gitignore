@@ -5,6 +5,7 @@
 
 # Frontend
 node_modules/
+.pnpm-store/
 dist/
 .vite/
 
@@ -23,3 +24,4 @@ Thumbs.db
 
 # Logs
 *.log
+.gstack/

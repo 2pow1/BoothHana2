@@ -24,6 +24,10 @@
 
 프런트는 기본적으로 `http://localhost:5173`, API는 `http://localhost:8080`을 사용합니다. 카카오 개발자 앱의 Redirect URI에는 백엔드의 `/login/oauth2/code/kakao` 주소가 필요합니다.
 
+## Development mock data
+
+카카오 로그인으로 `app_user`가 생성된 뒤 [개발용 mock seed](database/dev/001_seed_mock_data.sql)를 Supabase SQL Editor에서 한 번 실행할 수 있습니다. 최신 로그인 사용자를 부스 소유자와 예약자로 연결하며, `[MOCK]` 또는 `MOCK-` 표식이 붙은 개발 데이터만 추가합니다. 이 파일은 운영 마이그레이션이나 애플리케이션 시작 시 자동 실행되지 않습니다.
+
 ## Deployment
 
 - Vercel: Root Directory를 `frontend`로 지정하고 `VITE_API_BASE_URL`을 백엔드 공개 주소로 설정합니다.

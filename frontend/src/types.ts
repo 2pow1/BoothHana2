@@ -18,6 +18,8 @@ export interface EventSummary {
   description: string
   imageUrl?: string
   imageKey?: string
+  reservationStartAt?: string
+  reservationEndAt?: string
   status: EventStatus
   boothCount?: number
 }

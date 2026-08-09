@@ -73,7 +73,7 @@ public class PlatformService {
     public List<BoothView> creatorEventBooths(UserAccount owner) {
         List<Long> ids = booths.findByOwnerUserIdOrderByIdDesc(owner.id).stream().map(value -> value.id).toList();
         if (ids.isEmpty()) return List.of();
-        return eventBooths.findByBoothIdIn(ids).stream().map(this::boothView).toList();
+        return eventBooths.findByBoothIdIn(ids).stream().filter(value -> value.status == ApplicationStatus.APPROVED).map(this::boothView).toList();
     }
     @Transactional
     public BoothView createBooth(UserAccount owner, BoothInput input) {
@@ -103,7 +103,7 @@ public class PlatformService {
     }
 
     public List<ProductView> creatorProducts(UserAccount owner, Long eventBoothId) {
-        requireOwnedEventBooth(owner, eventBoothId);
+        requireApprovedOwnedEventBooth(owner, eventBoothId);
         return eventProducts.findByEventBoothIdOrderByIdDesc(eventBoothId).stream().map(this::productView).toList();
     }
     @Transactional
@@ -137,7 +137,7 @@ public class PlatformService {
         return creatorProducts(owner, eventBoothId);
     }
 
-    public List<NoticeView> creatorNotices(UserAccount owner, Long eventBoothId) { requireOwnedEventBooth(owner, eventBoothId); return notices.findByEventBoothIdOrderByPinnedDescCreatedAtDesc(eventBoothId).stream().map(this::noticeView).toList(); }
+    public List<NoticeView> creatorNotices(UserAccount owner, Long eventBoothId) { requireApprovedOwnedEventBooth(owner, eventBoothId); return notices.findByEventBoothIdOrderByPinnedDescCreatedAtDesc(eventBoothId).stream().map(this::noticeView).toList(); }
     @Transactional
     public NoticeView createNotice(UserAccount owner, Long eventBoothId, NoticeInput input) {
         requireMutableOwnedEventBooth(owner, eventBoothId); if (input.pinned()) unpinAll(eventBoothId, null);
@@ -156,6 +156,9 @@ public class PlatformService {
     public ReservationView createReservation(UserAccount user, ReservationInput input) {
         EventBooth eventBooth = requirePublicEventBooth(input.eventBoothId()); Event event = requireEvent(eventBooth.eventId);
         if (event.status != EventStatus.PUBLISHED) throw ApiException.conflict("종료된 행사에는 새 예약을 만들 수 없습니다.");
+        Instant now = Instant.now();
+        if (event.reservationStartAt != null && now.isBefore(event.reservationStartAt)) throw ApiException.conflict("아직 예약 가능 기간이 아닙니다.");
+        if (event.reservationEndAt != null && !now.isBefore(event.reservationEndAt)) throw ApiException.conflict("예약 가능 기간이 종료되었습니다.");
         if (input.items().stream().map(LineInput::eventProductId).distinct().count() != input.items().size()) throw ApiException.badRequest("같은 상품을 중복 선택할 수 없습니다.");
         List<EventProduct> selected = input.items().stream().map(line -> eventProducts.findById(line.eventProductId()).orElseThrow(() -> ApiException.notFound("상품을 찾을 수 없습니다."))).toList();
         for (int index = 0; index < selected.size(); index++) { EventProduct item = selected.get(index); LineInput line = input.items().get(index); if (!Objects.equals(item.eventBoothId, eventBooth.id) || !item.isPublic || !item.reservationEnabled || item.soldOut) throw ApiException.conflict("예약할 수 없는 상품이 포함되어 있습니다."); decrement(item, line.quantity()); }
@@ -209,7 +212,8 @@ public class PlatformService {
     private EventBooth requireEventBooth(Long id) { return eventBooths.findById(id).orElseThrow(() -> ApiException.notFound("행사 부스를 찾을 수 없습니다.")); }
     private EventBooth requirePublicEventBooth(Long id) { EventBooth value = requireEventBooth(id); Event event = requireEvent(value.eventId); if (value.status != ApplicationStatus.APPROVED || !value.isPublic || event.status == EventStatus.DRAFT) throw ApiException.notFound("공개된 부스를 찾을 수 없습니다."); return value; }
     private EventBooth requireOwnedEventBooth(UserAccount owner, Long id) { EventBooth value = requireEventBooth(id); requireOwnedBooth(owner, value.boothId); return value; }
-    private EventBooth requireMutableOwnedEventBooth(UserAccount owner, Long id) { EventBooth value = requireOwnedEventBooth(owner, id); if (requireEvent(value.eventId).status == EventStatus.ENDED) throw ApiException.conflict("종료된 행사는 수정하거나 새 판매를 기록할 수 없습니다."); return value; }
+    private EventBooth requireApprovedOwnedEventBooth(UserAccount owner, Long id) { EventBooth value = requireOwnedEventBooth(owner, id); if (value.status != ApplicationStatus.APPROVED) throw ApiException.conflict("승인된 행사 부스만 관리할 수 있습니다."); return value; }
+    private EventBooth requireMutableOwnedEventBooth(UserAccount owner, Long id) { EventBooth value = requireApprovedOwnedEventBooth(owner, id); if (requireEvent(value.eventId).status == EventStatus.ENDED) throw ApiException.conflict("종료된 행사는 수정하거나 새 판매를 기록할 수 없습니다."); return value; }
     private EventProduct requireOwnedEventProduct(UserAccount owner, Long id) { EventProduct value = eventProducts.findById(id).orElseThrow(() -> ApiException.notFound("상품을 찾을 수 없습니다.")); requireOwnedEventBooth(owner, value.eventBoothId); return value; }
     private BoothNotice requireNotice(Long id) { return notices.findById(id).orElseThrow(() -> ApiException.notFound("공지를 찾을 수 없습니다.")); }
     private Reservation requireReservation(Long id) { return reservations.findById(id).orElseThrow(() -> ApiException.notFound("예약을 찾을 수 없습니다.")); }
@@ -221,8 +225,8 @@ public class PlatformService {
     private void apply(Booth value, BoothInput input) { value.name = input.name(); value.description = text(input.intro()); value.imageKey = input.imageKey(); value.snsUrl = input.snsUrl(); }
     private void apply(EventProduct value, ProductInput input) { if (input.stockMode() == StockMode.FINITE && input.stockQuantity() == null) throw ApiException.badRequest("유한 재고 상품은 재고 수량이 필요합니다."); value.price = input.price(); value.stockMode = input.stockMode(); value.stockQuantity = input.stockMode() == StockMode.INFINITE ? null : input.stockQuantity(); value.soldOut = input.soldOut(); value.isPublic = input.isPublic(); value.reservationEnabled = input.reservationEnabled(); }
     private void apply(BoothNotice value, NoticeInput input) { value.title = input.title(); value.body = input.body(); value.pinned = input.pinned(); }
-    private void apply(Event value, EventInput input) { if (!input.startAt().isBefore(input.endAt())) throw ApiException.badRequest("행사 시작은 종료보다 빨라야 합니다."); value.name = input.name(); value.startAt = input.startAt(); value.endAt = input.endAt(); value.venue = input.venue(); value.description = text(input.description()); value.imageKey = input.imageKey(); value.reservationStartAt = input.reservationStartAt(); value.reservationEndAt = input.reservationEndAt(); value.status = input.status() == null ? EventStatus.DRAFT : input.status(); }
-    private EventView eventView(Event value) { long count = eventBooths.findAllByOrderByIdDesc().stream().filter(item -> Objects.equals(item.eventId, value.id) && item.status == ApplicationStatus.APPROVED).count(); return new EventView(value.id, value.name, value.startAt, value.endAt, value.venue, value.description, image(value.imageKey), value.status, count); }
+    private void apply(Event value, EventInput input) { if (!input.startAt().isBefore(input.endAt())) throw ApiException.badRequest("행사 시작은 종료보다 빨라야 합니다."); if (input.reservationStartAt() != null && input.reservationEndAt() != null && !input.reservationStartAt().isBefore(input.reservationEndAt())) throw ApiException.badRequest("예약 시작은 예약 종료보다 빨라야 합니다."); value.name = input.name(); value.startAt = input.startAt(); value.endAt = input.endAt(); value.venue = input.venue(); value.description = text(input.description()); value.imageKey = input.imageKey(); value.reservationStartAt = input.reservationStartAt(); value.reservationEndAt = input.reservationEndAt(); value.status = input.status() == null ? EventStatus.DRAFT : input.status(); }
+    private EventView eventView(Event value) { long count = eventBooths.findAllByOrderByIdDesc().stream().filter(item -> Objects.equals(item.eventId, value.id) && item.status == ApplicationStatus.APPROVED).count(); return new EventView(value.id, value.name, value.startAt, value.endAt, value.venue, value.description, image(value.imageKey), value.reservationStartAt, value.reservationEndAt, value.status, count); }
     private BoothView basicBoothView(Booth value) { return new BoothView(value.id, null, value.name, users.findById(value.ownerUserId).map(user -> user.displayName).orElse("크리에이터"), "", value.description, image(value.imageKey), value.imageKey, value.snsUrl, ApplicationStatus.APPROVED, false, products.findByBoothIdOrderByIdDesc(value.id).size(), 0, List.of()); }
     private BoothView boothView(EventBooth value) { Booth booth = booths.findById(value.boothId).orElseThrow(); List<EventProduct> lines = eventProducts.findByEventBoothIdOrderByIdDesc(value.id); long reservable = lines.stream().filter(item -> item.isPublic && item.reservationEnabled && !item.soldOut).count(); return new BoothView(value.id, value.eventId, booth.name, users.findById(booth.ownerUserId).map(user -> user.displayName).orElse("크리에이터"), text(value.boothNumber), value.intro, image(booth.imageKey), booth.imageKey, booth.snsUrl, value.status, value.isPublic, lines.size(), reservable, notices.findByEventBoothIdOrderByPinnedDescCreatedAtDesc(value.id).stream().map(this::noticeView).toList()); }
     private ProductView productView(EventProduct value) { Product product = products.findById(value.productId).orElseThrow(); return new ProductView(value.id, value.eventBoothId, product.name, product.description, image(product.imageKey), product.imageKey, value.price, value.stockMode, value.stockQuantity, value.soldOut, value.isPublic, value.reservationEnabled); }

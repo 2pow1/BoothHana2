@@ -1,8 +1,5 @@
 package com.boothhana.security;
 
-import com.boothhana.domain.UserAccount;
-import com.boothhana.repository.UserAccountRepository;
-import jakarta.servlet.http.Cookie;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.*;
@@ -16,7 +13,7 @@ import java.util.*;
 @Configuration
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain security(HttpSecurity http, KakaoOAuthUserService oauthUsers, UserAccountRepository users,
+    SecurityFilterChain security(HttpSecurity http, KakaoOAuthUserService oauthUsers,
             @Qualifier("cors") CorsConfigurationSource corsSource,
             @Value("${app.frontend-url}") String frontendUrl) throws Exception {
         CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
@@ -29,12 +26,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/creator/**").hasRole("CREATOR")
                 .requestMatchers("/api/me/**", "/api/me").authenticated()
                 .anyRequest().permitAll())
-            .oauth2Login(oauth -> oauth.userInfoEndpoint(info -> info.userService(oauthUsers)).successHandler((request, response, authentication) -> {
-                UserAccount user = users.findByKakaoSubject(authentication.getName()).orElseThrow();
-                Cookie clear = new Cookie("BOOTH_ROLE", ""); clear.setPath("/"); clear.setMaxAge(0); clear.setHttpOnly(true); response.addCookie(clear);
-                String path = user.role.name().equals("ADMIN") ? "/admin/events" : user.role.name().equals("CREATOR") ? "/creator" : "/";
-                response.sendRedirect(frontendUrl + path);
-            }))
+            .oauth2Login(oauth -> oauth.userInfoEndpoint(info -> info.userService(oauthUsers))
+                .successHandler((request, response, authentication) -> response.sendRedirect(frontendUrl + "/")))
             .logout(logout -> logout.logoutUrl("/api/logout").logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)));
         return http.build();
     }

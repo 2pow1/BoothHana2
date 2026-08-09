@@ -14,7 +14,7 @@ import java.util.List;
 public class MeController {
     private final PlatformService service; private final CurrentUser current;
     public MeController(PlatformService service, CurrentUser current) { this.service = service; this.current = current; }
-    @GetMapping("/me") public UserView me(Authentication authentication) { return service.user(current.require(authentication)); }
+    @GetMapping("/me") public UserView me(Authentication authentication) { return service.user(current.require(authentication), current.permissions(authentication)); }
     @GetMapping("/me/reservations") public List<ReservationView> reservations(Authentication auth) { return service.userReservations(user(auth)); }
     @PostMapping("/me/reservations") public ReservationView create(Authentication auth, @Valid @RequestBody ReservationInput input) { return service.createReservation(user(auth), input); }
     @GetMapping("/me/reservations/{id}") public ReservationView reservation(Authentication auth, @PathVariable Long id) { return service.userReservation(user(auth), id); }

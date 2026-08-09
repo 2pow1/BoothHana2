@@ -1,4 +1,4 @@
-export type Role = 'FAN' | 'CREATOR' | 'ADMIN'
+export type Permission = 'FAN' | 'CREATOR' | 'ADMIN'
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'ENDED'
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 export type ReservationStatus = 'RESERVED' | 'PICKED_UP' | 'CANCELED'
@@ -6,7 +6,7 @@ export type ReservationStatus = 'RESERVED' | 'PICKED_UP' | 'CANCELED'
 export interface User {
   id: number
   displayName: string
-  role: Role
+  permissions: Permission[]
 }
 
 export interface EventSummary {

@@ -40,7 +40,7 @@ public class PlatformService {
         this.posSales = posSales; this.posItems = posItems; this.publicImageUrl = publicImageUrl;
     }
 
-    public UserView user(UserAccount user) { return new UserView(user.id, user.displayName, user.role); }
+    public UserView user(UserAccount user, List<Permission> permissions) { return new UserView(user.id, user.displayName, permissions); }
 
     public List<EventView> publicEvents() {
         List<Event> result = new ArrayList<>(events.findByStatusOrderByStartAtAsc(EventStatus.PUBLISHED));

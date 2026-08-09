@@ -1,7 +1,6 @@
 package com.boothhana.security;
 
 import com.boothhana.api.AuthController;
-import com.boothhana.repository.UserAccountRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -28,9 +27,6 @@ class SecurityConfigTests {
 
     @MockitoBean
     KakaoOAuthUserService oauthUsers;
-
-    @MockitoBean
-    UserAccountRepository users;
 
     @Test
     void allowsFrontendPreflightForCurrentUserRequest() throws Exception {

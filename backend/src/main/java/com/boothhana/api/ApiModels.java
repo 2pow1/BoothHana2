@@ -10,7 +10,7 @@ import java.util.Map;
 public final class ApiModels {
     private ApiModels() {}
 
-    public record UserView(Long id, String displayName, Role role) {}
+    public record UserView(Long id, String displayName, List<Permission> permissions) {}
     public record EventView(Long id, String name, Instant startAt, Instant endAt, String venue, String description, String imageUrl, EventStatus status, long boothCount) {}
     public record EventInput(@NotBlank String name, @NotNull Instant startAt, @NotNull Instant endAt, @NotBlank String venue, String description, String imageKey, Instant reservationStartAt, Instant reservationEndAt, EventStatus status) {}
     public record BoothView(Long id, Long eventId, String name, String creatorName, String boothNumber, String intro, String imageUrl, String imageKey, String snsUrl, ApplicationStatus status, boolean isPublic, long productCount, long reservableCount, List<NoticeView> notices) {}

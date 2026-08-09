@@ -1,7 +1,6 @@
 create table if not exists app_user (
   id bigserial primary key,
   kakao_subject varchar(255) not null unique,
-  role varchar(32) not null,
   display_name varchar(255) not null,
   created_at timestamptz not null default now()
 );

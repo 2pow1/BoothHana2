@@ -3,7 +3,7 @@ package com.boothhana.domain;
 public final class DomainEnums {
     private DomainEnums() {}
 
-    public enum Role { FAN, CREATOR, ADMIN }
+    public enum Permission { FAN, CREATOR, ADMIN }
     public enum EventStatus { DRAFT, PUBLISHED, ENDED }
     public enum ApplicationStatus { PENDING, APPROVED, REJECTED }
     public enum StockMode { FINITE, INFINITE }

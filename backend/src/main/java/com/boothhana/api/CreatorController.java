@@ -15,7 +15,7 @@ import java.util.List;
 public class CreatorController {
     private final PlatformService service; private final CurrentUser current;
     public CreatorController(PlatformService service, CurrentUser current) { this.service = service; this.current = current; }
-    @GetMapping("/events") public List<EventView> events() { return service.creatorEvents(); }
+    @GetMapping("/events") public List<EventView> events(Authentication auth) { return service.creatorEvents(user(auth)); }
     @GetMapping("/booths") public List<BoothView> booths(Authentication auth) { return service.creatorBooths(user(auth)); }
     @GetMapping("/event-booths") public List<BoothView> eventBooths(Authentication auth) { return service.creatorEventBooths(user(auth)); }
     @PostMapping("/booths") @ResponseStatus(HttpStatus.CREATED) public BoothView createBooth(Authentication auth, @Valid @RequestBody BoothInput input) { return service.createBooth(user(auth), input); }

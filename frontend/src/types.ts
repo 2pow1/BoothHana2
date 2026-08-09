@@ -22,6 +22,7 @@ export interface EventSummary {
   reservationEndAt?: string
   status: EventStatus
   boothCount?: number
+  applicationStatus?: ApplicationStatus
 }
 
 export interface BoothSummary {

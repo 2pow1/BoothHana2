@@ -7,7 +7,15 @@ import { PageHeader } from '../components/layout/PageHeader'
 import { StatusChip } from '../components/ui/StatusChip'
 import { ImageUploader } from '../components/ui/ImageUploader'
 import { formatPrice } from '../utils/format'
-import type { BoothNotice, BoothSummary, EventProduct, ReservationItem } from '../types'
+import type { BoothNotice, BoothSummary, EventProduct, EventSummary, ReservationItem } from '../types'
+
+function creatorEventState(event: EventSummary) {
+  if (event.applicationStatus === 'PENDING') return { label: '승인 대기', tone: 'warning' as const, button: '신청 완료' }
+  if (event.applicationStatus === 'APPROVED') return { label: '승인 완료', tone: 'active' as const, button: '승인 완료' }
+  if (event.applicationStatus === 'REJECTED') return { label: '반려', tone: 'danger' as const, button: '반려됨' }
+  if (event.status === 'PUBLISHED') return { label: '신청 가능', tone: 'active' as const, button: '참가 신청' }
+  return { label: event.status === 'ENDED' ? '종료' : '준비중', tone: 'muted' as const, button: '참가 신청' }
+}
 
 export function CreatorHomePage() {
   return <><PageHeader eyebrow="Creator · Dashboard" title="크리에이터 홈" description="행사 준비부터 현장 예약 수령과 POS까지, 지금 필요한 작업만 확인하세요." /><div className="metric-grid"><article><span>진행 부스</span><strong>—</strong><small>승인된 행사 부스</small></article><article><span>예약 대기</span><strong>—</strong><small>수령 전 예약</small></article><article><span>공개 상품</span><strong>—</strong><small>예약·현장 판매 상품</small></article></div><div className="dashboard-grid"><article className="panel"><h2>오늘 할 일</h2><div className="quick-links"><Link to="/creator/events">행사 참가 신청 <span>→</span></Link><Link to="/creator/booths">부스 정보 관리 <span>→</span></Link><Link to="/creator/reservations">예약 수령 처리 <span>→</span></Link><Link to="/creator/pos">POS 판매 기록 <span>→</span></Link></div></article><article className="panel editorial-panel"><p className="eyebrow">Recent Booth</p><h2>최근 부스를 준비하세요</h2><p>부스 소개, 상품 재고, 공지를 순서대로 점검하면 공개 페이지에 바로 반영됩니다.</p><Link className="btn primary" to="/creator/booths">내 부스 보기</Link></article></div></>
@@ -20,9 +28,9 @@ export function CreatorEventsPage() {
   const apply = async (eventId: number) => {
     const boothId = booths.data?.[0]?.id
     if (!boothId) { setMessage('먼저 기본 부스를 만들어 주세요.'); return }
-    try { await creatorApi.apply(eventId, boothId); setMessage('참가 신청을 저장했습니다.') } catch (error) { setMessage(error instanceof Error ? error.message : '참가 신청을 저장하지 못했습니다.') }
+    try { await creatorApi.apply(eventId, boothId); await events.reload(); setMessage('참가 신청을 저장했습니다.') } catch (error) { setMessage(error instanceof Error ? error.message : '참가 신청을 저장하지 못했습니다.') }
   }
-  return <><PageHeader eyebrow="Creator · Events" title="행사 목록" description="참가할 행사를 확인하고 내 부스로 신청합니다." />{message && <div className="notice-banner">{message}</div>}{events.loading ? <LoadingState label="행사를 불러오고 있습니다" /> : events.error ? <ErrorState error={events.error} retry={() => void events.reload()} /> : !events.data?.length ? <EmptyState title="참가 가능한 행사가 없습니다" description="관리자가 행사를 공개하면 이곳에 표시됩니다." /> : <div className="console-list">{events.data.map((event) => <article className="list-row" key={event.id}><div><StatusChip tone={event.status === 'PUBLISHED' ? 'active' : 'muted'}>{event.status === 'PUBLISHED' ? '신청 가능' : event.status === 'ENDED' ? '종료' : '준비중'}</StatusChip><h2>{event.name}</h2><p className="item-meta">{event.venue} · {event.startAt.slice(0, 10)} — {event.endAt.slice(0, 10)}</p></div><button className="btn primary" disabled={event.status !== 'PUBLISHED'} onClick={() => void apply(event.id)}>참가 신청</button></article>)}</div>}</>
+  return <><PageHeader eyebrow="Creator · Events" title="행사 목록" description="참가할 행사를 확인하고 내 부스로 신청합니다." />{message && <div className="notice-banner">{message}</div>}{events.loading ? <LoadingState label="행사를 불러오고 있습니다" /> : events.error ? <ErrorState error={events.error} retry={() => void events.reload()} /> : !events.data?.length ? <EmptyState title="참가 가능한 행사가 없습니다" description="관리자가 행사를 공개하면 이곳에 표시됩니다." /> : <div className="console-list">{events.data.map((event) => { const state = creatorEventState(event); return <article className="list-row" key={event.id}><div><StatusChip tone={state.tone}>{state.label}</StatusChip><h2>{event.name}</h2><p className="item-meta">{event.venue} · {event.startAt.slice(0, 10)} — {event.endAt.slice(0, 10)}</p></div><button className="btn primary" disabled={event.status !== 'PUBLISHED' || Boolean(event.applicationStatus)} onClick={() => void apply(event.id)}>{state.button}</button></article> })}</div>}</>
 }
 
 export function CreatorBoothsPage() {

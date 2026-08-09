@@ -13,12 +13,19 @@
 
 관리자가 행사를 공개하고, 크리에이터가 승인된 부스와 상품을 등록하며, 팬이 상품을 예약한 뒤 크리에이터가 현장 수령 또는 POS 판매를 기록하고, 그 결과와 통합 재고가 재접속 후에도 유지되는 하나의 정상 흐름을 실제 화면에서 확인한다.
 
+## Implementation status
+
+- 2026-08-09 기준 승인 범위의 React 화면, Spring Boot API, PostgreSQL 마이그레이션, 카카오 로그인, R2 서명 업로드와 개발용 mock seed가 `develop` 브랜치에 구현되어 있다.
+- TypeScript build, Oxlint, 백엔드 테스트와 로컬 브라우저의 주요 화면·인증 흐름을 검증했다.
+- Vercel·Render 공개 Preview 환경의 전체 정상 흐름 검증은 아직 남아 있다.
+- Creator 행사 목록은 참가 신청 상태를 표시하지 않고 첫 번째 기본 부스를 자동 선택하는 현재 구현 한계가 있다. 서버는 동일 행사·부스의 중복 신청을 차단하지만 화면 상태 보정이 필요하다.
+
 ## Repository baseline
 
-- 2026-08-09 현재 React/Vite 프런트엔드, Java/Spring Boot 백엔드, 초기 PostgreSQL 스키마와 인증 테스트가 구현되어 있다.
+- 2026-08-09 현재 React/Vite 프런트엔드, Java/Spring Boot 백엔드, 순서 있는 PostgreSQL 스키마·마이그레이션과 인증 테스트가 구현되어 있다.
 - 프런트엔드는 TypeScript 함수형 컴포넌트·Hooks·`AuthContext`·브라우저 `fetch`·controlled input·일반 CSS·React Router·공통 오류 상태를 사용한다.
-- 백엔드는 Spring Security OAuth2 Client로 카카오 로그인을 처리하며, 현재 구현은 로그인 전 팬·크리에이터 선택값을 쿠키로 전달해 단일 `User.role`을 저장한다.
-- 이 계획 개정은 현재 폴더 구조와 작성 방식을 유지하되, 위 단일 역할 인증 흐름만 가산형 기능 권한으로 교체한다.
+- 백엔드는 Spring Security OAuth2 Client로 카카오 로그인을 처리한다. 로그인 전 역할 선택은 없으며 모든 로그인 사용자에게 팬·크리에이터 권한을 파생하고 지정 카카오 계정에 관리자 권한을 추가한다.
+- `database/002_remove_user_role.sql`로 기존 `app_user.role` 컬럼을 제거했으며 `/api/me`는 기능 권한 목록을 반환한다.
 - 역기획 근거는 `docs/analysis/2026-08-09-prototype-reverse-analysis.md`를 사용한다. 프로토타입 화면 전체를 소스 코드로 복사하거나 전체 라우트로 재현하지 않는다.
 
 ## Users and ownership
@@ -85,7 +92,7 @@
 
 ### Folder structure
 
-현재 저장소에 기존 구조가 없으므로 다음 최소 모노레포 구조를 제안한다. 구현 과정에서 범위 밖 계층이나 공용 패키지를 추가하지 않는다.
+승인된 다음 최소 모노레포 구조를 사용한다. 구현 과정에서 범위 밖 계층이나 공용 패키지를 추가하지 않는다.
 
 ```text
 BoothHana/
@@ -155,12 +162,12 @@ BoothHana/
 
 ### Routing
 
-- 현재 라우팅 라이브러리가 설치되어 있지 않다.
+- 승인된 `react-router`를 사용해 브라우저 URL과 팬·크리에이터·관리자 영역을 구분한다.
 - 공개 화면은 `/events`, `/events/:eventId`, `/booths/:eventBoothId`, `/products/:eventProductId`, `/reservations`, `/reservations/:reservationId`를 최소 후보로 한다.
 - 크리에이터 화면은 `/creator/events`, `/creator/booths`, `/creator/event-booths/:id`, `/creator/event-booths/:id/products`, `/creator/reservations`, `/creator/pos`, `/creator/notices`를 최소 후보로 한다.
 - 관리자 화면은 `/admin/events`, `/admin/events/:eventId`, `/admin/applications`를 최소 후보로 한다.
 - 기능 권한 보호는 프런트의 화면 진입 제어와 백엔드의 소유권·관리자 검사를 함께 적용한다. 모든 로그인 사용자는 팬·크리에이터 영역에 진입할 수 있다.
-- `react-router`는 현재 저장소에 없는 새 라이브러리이므로 사용자 승인 전 추가하지 않는다. 승인하지 않는 경우 브라우저 History API와 작은 라우트 표만으로 구현하되, 이 선택은 구현 전에 확정한다.
+- 라우트 표는 `frontend/src/app/router.tsx`에서 관리하고 `frontend/vercel.json`이 SPA 새로고침을 `index.html`로 연결한다.
 
 ### Error handling
 
@@ -172,8 +179,8 @@ BoothHana/
 
 ### Testing and verification
 
-- 현재 프런트·백엔드 테스트 도구가 없으므로 기존 테스트 방식은 따를 수 없다.
-- 사용자가 구현 후 TypeScript와 린트 오류 확인을 요청했으므로 Vite React TypeScript 기본 구성과 그 템플릿 수준의 ESLint 구성만 사용한다.
+- 프런트는 TypeScript project build와 Oxlint를 사용하고, 백엔드는 Spring Boot 기본 테스트 의존성을 사용한다.
+- 사용자가 요청한 TypeScript와 린트 오류는 `pnpm build`, `pnpm lint`로 확인한다.
 - 새 프런트 테스트 라이브러리를 임의로 추가하지 않는다. 프런트는 Vite production build와 실제 브라우저에서 권한별 정상 흐름을 확인한다.
 - 백엔드는 승인된 Spring Boot 기본 테스트 의존성 범위 안에서 핵심 서비스 규칙과 API 정상 흐름만 검증한다. 별도 테스트 프레임워크를 더하지 않는다.
 - 매 구현 단계마다 화면 저장→새로고침→재조회, 다른 소유자 접근 거부, 유한·무한 재고 표시, 취소 재고 규칙을 해당 단계 범위만큼 확인한다.
@@ -181,28 +188,27 @@ BoothHana/
 
 ### Dependency rule
 
-- 현재 저장소에는 설치된 라이브러리가 하나도 없다.
-- React·React DOM·Vite와 승인된 Spring Boot·Gradle 구성을 시작하는 데 필수인 의존성도 실제 추가 전 목록을 사용자에게 제시한다.
-- 라우팅, QR 생성, R2 서명처럼 표준 기능만으로 직접 구현하는 비용이 큰 항목은 후보 라이브러리·사용 이유·대안·영향을 제시하고 승인을 받은 뒤 추가한다.
+- 승인된 React·React DOM·Vite·React Router·QR 및 Spring Boot·Gradle·AWS S3 SDK 의존성이 lockfile과 build 파일에 반영되어 있다.
+- 이후 새 라이브러리는 후보·사용 이유·대안·영향을 제시하고 승인을 받은 뒤 추가한다.
 - 상태 관리, HTTP, 폼, 검증, CSS, 프런트 테스트 편의를 위한 라이브러리는 이번 계획에 추가하지 않는다.
 
-구현 시작 전 승인받을 의존성 후보는 다음으로 제한한다. 버전은 승인 후 프로젝트 생성 시점의 상호 호환되는 안정 버전을 확인해 lockfile로 고정하며, 표에 없는 패키지는 다시 승인받는다.
+승인 후 실제 구현에 반영한 의존성은 다음 범위로 제한한다. 버전은 lockfile과 Gradle build 파일에 고정하며, 표에 없는 패키지는 다시 승인받는다.
 
-| 구분 | 후보 | 용도와 근거 | 미승인 시 대안 |
+| 구분 | 의존성 | 용도와 근거 | 미승인 시 대안 |
 | --- | --- | --- | --- |
 | 프런트 필수 | `react`, `react-dom`, `vite`, `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom` | 승인된 React/Vite TypeScript 프로젝트 골격과 TypeScript 오류 확인. [Vite 공식 React 템플릿](https://v8.vite.dev/guide/) | React TypeScript 구현 불가 |
-| 프런트 필수 | Vite React TypeScript 기본 ESLint 패키지 | 사용자가 요구한 린트 오류 확인. Vite 기본 템플릿 범위를 넘는 규칙·플러그인은 추가하지 않음 | 린트 오류 확인 불가 |
-| 프런트 후보 | `react-router` | 중첩 없는 SPA URL, 뒤로가기, 팬·크리에이터·관리자 영역 라우트. [React Router 공식 Vite 설치](https://reactrouter.com/start/data/installation) | History API 기반 최소 라우트 표 |
-| 프런트 후보 | `qrcode` | 예약번호 또는 상세 URL을 표시용 QR 이미지로 생성. [node-qrcode 저장소](https://github.com/soldair/node-qrcode) | QR 제외는 승인 범위와 충돌하며 직접 QR 알고리즘 구현은 하지 않음 |
+| 프런트 필수 | `oxlint` | 사용자가 요구한 린트 오류 확인. 현재 `.oxlintrc.json`의 최소 React·TypeScript 규칙만 사용 | 린트 오류 확인 불가 |
+| 프런트 승인 | `react-router` | 중첩 없는 SPA URL, 뒤로가기, 팬·크리에이터·관리자 영역 라우트. [React Router 공식 Vite 설치](https://reactrouter.com/start/data/installation) | History API 기반 최소 라우트 표 |
+| 프런트 승인 | `qrcode` | 예약번호 또는 상세 URL을 표시용 QR 이미지로 생성. [node-qrcode 저장소](https://github.com/soldair/node-qrcode) | QR 제외는 승인 범위와 충돌하며 직접 QR 알고리즘 구현은 하지 않음 |
 | 백엔드 필수 | Spring Boot Web, Data JPA, Validation, OAuth2 Client, 기본 Test starter, PostgreSQL JDBC driver | REST API, Supabase PostgreSQL, 입력 검증, 카카오 OAuth. [Spring OAuth2 Client](https://docs.spring.io/spring-security/reference/servlet/oauth2/), [Spring SQL/JPA](https://docs.spring.io/spring-boot/reference/data/sql.html) | 승인된 Java/Spring/DB/인증 구성을 구현할 수 없음 |
-| 백엔드 후보 | AWS SDK for Java v2 S3·presigner 모듈 | R2의 S3 호환 API로 짧은 PUT 서명 URL 발급. [Cloudflare 공식 Java 예제](https://developers.cloudflare.com/r2/examples/aws/aws-sdk-java/) | AWS Signature V4를 직접 구현해야 하므로 사용하지 않음 |
+| 백엔드 승인 | AWS SDK for Java v2 S3·presigner 모듈 | R2의 S3 호환 API로 짧은 PUT 서명 URL 발급. [Cloudflare 공식 Java 예제](https://developers.cloudflare.com/r2/examples/aws/aws-sdk-java/) | AWS Signature V4를 직접 구현해야 하므로 사용하지 않음 |
 
 ## Minimal data
 
 | Field | Purpose | Evidence |
 | --- | --- | --- |
 | `User(id, kakao_subject, display_name, created_at)` | 카카오 계정 식별. 팬·크리에이터 권한은 모든 로그인 사용자에게 파생하고 지정 계정에만 관리자 권한을 추가하므로 단일 역할 상태를 저장하지 않는다. | 사용자 권한 모델 변경(2026-08-09); 최신 안건 정리 46-63행 |
-| `Event(id, name, start_at, end_at, venue, description, image_key, preorder_start_at, preorder_end_at, status)` | 행사 등록·공개·종료와 예약 가능 기간 | 엑셀 `01_MVP_기능명세!A1:L53`, `03_데이터구조!A1:F16` |
+| `Event(id, name, start_at, end_at, venue, description, image_key, reservation_start_at, reservation_end_at, status)` | 행사 등록·공개·종료와 예약 가능 기간 | 엑셀 `01_MVP_기능명세!A1:L53`, `03_데이터구조!A1:F16` |
 | `Booth(id, owner_user_id, name, description, image_key, sns_url)` | 크리에이터가 재사용하는 기본 부스 | 엑셀 `03_데이터구조!A1:F16` |
 | `EventBooth(id, event_id, booth_id, booth_number, intro, status, is_public)` | 행사 참가 신청·승인과 행사별 부스 정보 | 엑셀 `02_주요플로우!A1:H19`, `03_데이터구조!A1:F16` |
 | `Product(id, booth_id, name, description, image_key)` | 행사 간 복사 가능한 기본 상품 정보 | 엑셀 `01_MVP_기능명세!A1:L53`, `03_데이터구조!A1:F16` |
@@ -292,7 +298,7 @@ None. 기존 개발 데이터의 `app_user.role` 컬럼 제거를 포함한 로�
 | D-022 | API 호출은 브라우저 `fetch`와 작은 공통 client를 사용한다. | 사용자 요청: 새 라이브러리 임의 추가 금지; 기존 API 방식 없음 | Axios 등 추가; 화면마다 직접 fetch | 공통 오류와 쿠키 처리만 모으는 최소 방식이다. | Easy | user-approved |
 | D-023 | 폼은 controlled input·HTML 제약·작은 검증 함수로 구현한다. | 사용자 요청: 새 라이브러리 임의 추가 금지; 기존 폼 방식 없음 | React Hook Form/Zod 등 추가 | 핵심 폼 수와 검증 범위에 맞는 최소 방식이다. | Easy | user-approved |
 | D-024 | 스타일은 프로토타입 톤을 일반 CSS와 토큰 파일로 옮긴다. | 역기획 분석 `docs/analysis/2026-08-09-prototype-reverse-analysis.md`; 기존 스타일 방식 없음 | Tailwind/CSS-in-JS 추가; 디자인 시스템 구축 | 새 의존성 없이 참고 화면의 톤을 재현한다. | Easy | user-approved |
-| D-025 | 프런트 자동 테스트 라이브러리를 추가하지 않고 TypeScript·ESLint·build·브라우저 정상 흐름을 검증한다. | 사용자 요청: TypeScript·린트·브라우저 오류 확인 및 새 라이브러리 임의 추가 금지; 기존 테스트 설정 없음 | Vitest/Testing Library/Playwright 추가 | 요청한 정적·실행 검증을 하면서 별도 테스트 체계를 만들지 않는다. | Easy | user-approved |
+| D-025 | 프런트 자동 테스트 라이브러리를 추가하지 않고 TypeScript·Oxlint·build·브라우저 정상 흐름을 검증한다. | 사용자 요청: TypeScript·린트·브라우저 오류 확인 및 새 라이브러리 임의 추가 금지; 기존 테스트 설정 없음 | Vitest/Testing Library/Playwright 추가 | 요청한 정적·실행 검증을 하면서 별도 테스트 체계를 만들지 않는다. | Easy | user-approved |
 | D-026 | 삭제는 예약·판매가 연결되지 않은 행사의 부스·상품에만 허용하고 연결 기록이 있으면 비공개·종료 상태를 사용한다. | 기존 Assumptions; 데이터 손실 방지 원칙 | 연결 데이터까지 물리 삭제; 전체 soft delete | 대규모 복구 체계 없이 명백한 데이터 손실을 피한다. | Moderate | user-approved |
 | D-027 | 행사 종료는 관리자 수동 상태 변경을 기준으로 하고 종료 시각 자동 작업은 만들지 않는다. | 관리자 종료가 포함된 승인 범위; 백그라운드 작업 명시적 제외 | 종료 시각 자동 전환 | 별도 스케줄러 없이 승인된 종료 흐름을 만족한다. | Easy | user-approved |
 | D-028 | 이전 상품은 이름·설명·이미지를 복사하고 행사별 가격·재고·공개·예약·SOLD OUT 값은 새로 입력한다. | 승인 범위의 기본 상품/행사 상품 분리; 엑셀 초안의 재고·판매 기록 복사 금지 | 이전 가격까지 복사; 모든 행사 값을 복사 | 과거 운영 상태를 새 행사에 잘못 이어받지 않는 최소 규칙이다. | Moderate | user-approved |
@@ -303,7 +309,7 @@ None. 기존 개발 데이터의 `app_user.role` 컬럼 제거를 포함한 로�
 ## Assumptions
 
 - Included scope, Explicit exclusions, 기술 구성과 로그인·권한 개정안은 2026-08-09 사용자 승인 완료 상태다.
-- 프로젝트에는 React/Vite, Spring Boot, PostgreSQL 초기 스키마와 단일 역할 기반 카카오 로그인 구현이 있으며 개정 승인 후 해당 부분만 교체한다.
+- 프로젝트에는 React/Vite, Spring Boot, PostgreSQL 스키마와 가산형 권한 기반 카카오 로그인 구현이 있다.
 - 첫 검증 대상은 소수 사용자가 사용하는 단일 MVP이며 동시 재고 정확성은 보장하지 않는다.
 - 가격은 온라인 청구 금액이 아니라 현장 결제를 위한 안내 및 POS 기록 값이다.
 - Supabase는 PostgreSQL DB 용도로 사용하고, 부스·상품 이미지 원본은 Cloudflare R2에만 저장한다.
@@ -337,3 +343,4 @@ Stop when the completion checks pass.
 | 2026-08-09 | 2단계 구현 설계와 제한된 의존성을 승인하고 TypeScript·ESLint 검증 요구를 반영해 Approved로 변경했다. | 사용자가 설계를 승인하고 구현 및 TypeScript·린트 검증을 요청했다. |
 | 2026-08-09 | 로그인 전 팬·크리에이터 선택을 제거하고, 로그인 후 두 화면을 자유롭게 전환하는 가산형 권한 모델로 수정해 Draft로 전환했다. | 사용자가 팬·크리에이터를 배타적 상태값이 아닌 사용자에게 추가되는 권한으로 명시했다. |
 | 2026-08-09 | 로그인·권한 개정안과 기존 `app_user.role` 컬럼 제거를 승인하고 Approved로 변경했다. | 사용자가 개정안을 승인했다. |
+| 2026-08-09 | 구현 상태, 실제 의존성·검증 도구·DB 필드와 현재 참가 신청 화면 한계를 문서에 반영했다. | 구현 이후 문서와 코드의 사실 관계를 동기화했다. |

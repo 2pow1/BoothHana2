@@ -90,7 +90,7 @@ QA found 2 issues, fixed and browser-verified both, with scoped health improving
 
 - Scope: event-booth information update/delete and POS sale detail
 - Frontend: Oxlint and TypeScript production build passed
-- Backend: full Gradle test suite passed, including update, safe delete, delete-blocking, and owned POS detail tests
+- Backend: 23 Gradle tests passed, including update, safe delete, reservation/POS delete-blocking, owned/unauthorized POS detail, and POS item/total mapping
 - Browser: Kakao re-login succeeded after restarting the latest backend; authenticated visual interaction was re-run
 - Event booth: existing values loaded, unchanged save succeeded, and the same values remained after a full reload
 - Ended event booth: read-only notice displayed and inputs, delete, and save actions were disabled

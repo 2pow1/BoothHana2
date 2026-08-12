@@ -13,6 +13,8 @@ import com.boothhana.domain.Event;
 import com.boothhana.domain.EventBooth;
 import com.boothhana.domain.EventProduct;
 import com.boothhana.domain.PosSale;
+import com.boothhana.domain.PosSaleItem;
+import com.boothhana.domain.Product;
 import com.boothhana.domain.Reservation;
 import com.boothhana.domain.UserAccount;
 import com.boothhana.domain.DomainEnums.ApplicationStatus;
@@ -249,6 +251,21 @@ class PlatformServiceTests {
     }
 
     @Test
+    void rejectsEventBoothDeletionWhenPosSalesExist() {
+        UserAccount owner = user();
+        EventBooth eventBooth = stubOwnedEventBooth(owner, ApplicationStatus.APPROVED);
+        Event event = publishedEvent();
+        when(events.findById(event.id)).thenReturn(Optional.of(event));
+        when(posSales.countByEventBoothId(eventBooth.id)).thenReturn(1L);
+
+        assertThatThrownBy(() -> service.deleteEventBooth(owner, eventBooth.id))
+            .isInstanceOf(ApiException.class)
+            .hasMessage("예약 또는 판매가 연결된 행사 부스는 삭제할 수 없습니다.");
+
+        verify(eventBooths, never()).delete(eventBooth);
+    }
+
+    @Test
     void returnsOwnedPosSaleDetail() {
         UserAccount owner = user();
         Booth booth = new Booth();
@@ -261,15 +278,49 @@ class PlatformServiceTests {
         sale.id = 41L;
         sale.eventBoothId = eventBooth.id;
         sale.saleNo = "POS-TEST-001";
+        PosSaleItem line = new PosSaleItem();
+        line.id = 51L;
+        line.posSaleId = sale.id;
+        line.eventProductId = 61L;
+        line.quantity = 2;
+        line.unitPrice = 12_000L;
+        EventProduct eventProduct = new EventProduct();
+        eventProduct.id = line.eventProductId;
+        eventProduct.productId = 71L;
+        Product product = new Product();
+        product.id = eventProduct.productId;
+        product.name = "아크릴 키링";
         when(booths.findByOwnerUserIdOrderByIdDesc(owner.id)).thenReturn(List.of(booth));
         when(eventBooths.findByBoothIdIn(List.of(booth.id))).thenReturn(List.of(eventBooth));
         when(posSales.findById(sale.id)).thenReturn(Optional.of(sale));
-        when(posItems.findByPosSaleId(sale.id)).thenReturn(List.of());
+        when(posItems.findByPosSaleId(sale.id)).thenReturn(List.of(line));
+        when(eventProducts.findById(eventProduct.id)).thenReturn(Optional.of(eventProduct));
+        when(products.findById(product.id)).thenReturn(Optional.of(product));
 
         var view = service.posSale(owner, sale.id);
 
         assertThat(view.id()).isEqualTo(sale.id);
         assertThat(view.saleNo()).isEqualTo("POS-TEST-001");
+        assertThat(view.totalAmount()).isEqualTo(24_000L);
+        assertThat(view.items()).singleElement().satisfies(item -> {
+            assertThat(item.productName()).isEqualTo("아크릴 키링");
+            assertThat(item.quantity()).isEqualTo(2);
+            assertThat(item.unitPrice()).isEqualTo(12_000L);
+        });
+    }
+
+    @Test
+    void rejectsAnotherOwnersPosSaleDetail() {
+        UserAccount owner = user();
+        PosSale sale = new PosSale();
+        sale.id = 41L;
+        sale.eventBoothId = 999L;
+        when(posSales.findById(sale.id)).thenReturn(Optional.of(sale));
+        when(booths.findByOwnerUserIdOrderByIdDesc(owner.id)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.posSale(owner, sale.id))
+            .isInstanceOf(ApiException.class)
+            .hasMessage("다른 부스의 판매 기록입니다.");
     }
 
     @Test

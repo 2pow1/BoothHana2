@@ -5,7 +5,7 @@
 - Tier: Standard
 - Mode: diff-aware
 - Framework: React SPA + Spring Boot
-- Status: Complete with one access-limited check
+- Status: Complete
 
 ## Baseline
 
@@ -56,8 +56,19 @@
 - Creator flow: event applications, base/approved booths, product access, pending booth access rejection, reservation list, POS, notices verified
 - Responsive: 375 × 812 checked on event list, creator event list, and notices; no horizontal overflow
 - Static checks: frontend lint and TypeScript production build passed
-- Backend checks: 17 tests passed, including the new ISSUE-001 regression test
-- Admin: non-admin rejection verified; event form/time UI could not be exercised because the browser session account was not the configured admin
+- Backend checks: full Gradle test suite passed, including the new ISSUE-001 regression test
+- Admin: non-admin rejection and designated-admin access both verified; event create form, date/time input, DRAFT save, list reflection, and reload persistence passed
+
+## Final Admin QA - 2026-08-12
+
+- Account: designated Kakao account configured through `ADMIN_KAKAO_SUBJECT`
+- Route: `/admin/events` and `/admin/events/new`
+- Access: `ADMIN` console access verified after backend restart and Kakao re-login
+- Input: event name, event period, reservation period, venue, description, and DRAFT status
+- Save result: `[QA] 관리자 행사 등록 검증 2026-08-12` created successfully
+- Persistence: saved event remained visible after a full browser reload
+- Browser console errors/warnings: 0
+- Result: Pass
 
 ## Health Score
 

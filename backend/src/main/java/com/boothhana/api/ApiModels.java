@@ -15,6 +15,7 @@ public final class ApiModels {
     public record EventInput(@NotBlank String name, @NotNull Instant startAt, @NotNull Instant endAt, @NotBlank String venue, String description, String imageKey, Instant reservationStartAt, Instant reservationEndAt, EventStatus status) {}
     public record BoothView(Long id, Long eventId, String name, String creatorName, String boothNumber, String intro, String imageUrl, String imageKey, String snsUrl, ApplicationStatus status, boolean isPublic, long productCount, long reservableCount, List<NoticeView> notices) {}
     public record BoothInput(@NotBlank String name, String intro, String imageKey, String snsUrl) {}
+    public record EventBoothInput(@NotBlank String boothNumber, String intro, boolean isPublic) {}
     public record ApplicationInput(@NotNull Long eventId, @NotNull Long boothId) {}
     public record ApplicationView(Long id, Long eventId, String eventName, Long boothId, String boothName, String creatorName, ApplicationStatus status, String reason) {}
     public record RejectInput(@NotBlank String reason) {}

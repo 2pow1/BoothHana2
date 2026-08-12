@@ -5,7 +5,7 @@ import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { BoothDetailPage, EventDetailPage, EventsPage, ProductDetailPage } from '../pages/PublicPages'
 import { ReservationCreatePage, ReservationDetailPage, ReservationsPage } from '../pages/ReservationPages'
-import { CreatorBoothsPage, CreatorEventsPage, CreatorHomePage, CreatorNoticesPage, CreatorPosPage, CreatorProductsPage, CreatorReservationsPage } from '../pages/CreatorPages'
+import { CreatorBoothsPage, CreatorEventBoothPage, CreatorEventsPage, CreatorHomePage, CreatorNoticesPage, CreatorPosPage, CreatorProductsPage, CreatorReservationsPage } from '../pages/CreatorPages'
 import { AdminApplicationsPage, AdminEventFormPage, AdminEventsPage } from '../pages/AdminPages'
 import { EmptyState } from '../components/ui/States'
 
@@ -25,6 +25,7 @@ export const router = createBrowserRouter([
     { index: true, element: <CreatorHomePage /> },
     { path: 'events', element: <CreatorEventsPage /> },
     { path: 'booths', element: <CreatorBoothsPage /> },
+    { path: 'event-booths/:eventBoothId', element: <CreatorEventBoothPage /> },
     { path: 'event-booths/:eventBoothId/products', element: <CreatorProductsPage /> },
     { path: 'reservations', element: <CreatorReservationsPage /> },
     { path: 'pos', element: <CreatorPosPage /> },

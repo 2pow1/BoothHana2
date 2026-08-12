@@ -33,7 +33,7 @@ cd backend
 
 - `/api/public/**`: 공개 행사·부스·상품 조회
 - `/api/me`, `/api/me/reservations/**`: 로그인 사용자와 자신의 예약
-- `/api/creator/**`: 부스, 참가 신청, 상품, 공지, 예약 수령, POS
+- `/api/creator/**`: 기본·행사별 부스, 참가 신청, 상품, 공지, 예약 수령, POS 목록·단건 상세·취소
 - `/api/admin/**`: 지정 관리자 계정의 행사와 참가 신청 관리
 - `/api/creator/uploads/presign`: Cloudflare R2 직접 업로드용 서명 URL 발급
 

@@ -85,3 +85,12 @@
 ## PR Summary
 
 QA found 2 issues, fixed and browser-verified both, with scoped health improving from 97 to 100.
+
+## Supplemental Verification - 2026-08-12
+
+- Scope: event-booth information update/delete and POS sale detail
+- Frontend: Oxlint and TypeScript production build passed
+- Backend: full Gradle test suite passed, including update, safe delete, delete-blocking, and owned POS detail tests
+- Browser: the controllable local tabs had no active Kakao session, so authenticated visual interaction was not re-run in this pass
+- Safety: destructive delete was verified at the service-test level only; no local user data was deleted
+- Remaining: authenticated visual QA and the public Vercel/Render preview flow

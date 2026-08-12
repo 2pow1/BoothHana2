@@ -81,6 +81,24 @@ public class PlatformService {
         return eventBooths.findByBoothIdIn(ids).stream().filter(value -> value.status == ApplicationStatus.APPROVED).map(this::boothView).toList();
     }
     @Transactional
+    public BoothView updateEventBooth(UserAccount owner, Long id, EventBoothInput input) {
+        EventBooth value = requireMutableOwnedEventBooth(owner, id);
+        value.boothNumber = input.boothNumber().trim();
+        value.intro = text(input.intro());
+        value.isPublic = input.isPublic();
+        return boothView(eventBooths.save(value));
+    }
+    @Transactional
+    public void deleteEventBooth(UserAccount owner, Long id) {
+        EventBooth value = requireMutableOwnedEventBooth(owner, id);
+        if (reservations.countByEventBoothId(id) > 0 || posSales.countByEventBoothId(id) > 0) {
+            throw ApiException.conflict("예약 또는 판매가 연결된 행사 부스는 삭제할 수 없습니다.");
+        }
+        eventProducts.deleteAll(eventProducts.findByEventBoothIdOrderByIdDesc(id));
+        notices.deleteAll(notices.findByEventBoothIdOrderByPinnedDescCreatedAtDesc(id));
+        eventBooths.delete(value);
+    }
+    @Transactional
     public BoothView createBooth(UserAccount owner, BoothInput input) {
         Booth booth = new Booth(); booth.ownerUserId = owner.id; apply(booth, input); return basicBoothView(booths.save(booth));
     }
@@ -188,6 +206,11 @@ public class PlatformService {
     public ReservationView pickup(UserAccount owner, Long id) { Reservation value = requireReservation(id); if (!ownedEventBoothIds(owner).contains(value.eventBoothId)) throw ApiException.forbidden("다른 부스의 예약입니다."); if (value.status == ReservationStatus.RESERVED) { value.status = ReservationStatus.PICKED_UP; value.pickedUpAt = Instant.now(); value = reservations.save(value); } return reservationView(value); }
 
     public List<PosView> posSales(UserAccount owner) { List<Long> ids = ownedEventBoothIds(owner); if (ids.isEmpty()) return List.of(); return posSales.findByEventBoothIdInOrderBySoldAtDesc(ids).stream().map(this::posView).toList(); }
+    public PosView posSale(UserAccount owner, Long id) {
+        PosSale sale = posSales.findById(id).orElseThrow(() -> ApiException.notFound("판매 기록을 찾을 수 없습니다."));
+        if (!ownedEventBoothIds(owner).contains(sale.eventBoothId)) throw ApiException.forbidden("다른 부스의 판매 기록입니다.");
+        return posView(sale);
+    }
     @Transactional
     public PosView createPos(UserAccount owner, PosInput input) {
         requireMutableOwnedEventBooth(owner, input.eventBoothId());

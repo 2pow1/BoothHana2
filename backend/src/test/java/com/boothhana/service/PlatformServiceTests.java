@@ -2,6 +2,7 @@ package com.boothhana.service;
 
 import com.boothhana.api.ApiException;
 import com.boothhana.api.ApiModels.EventInput;
+import com.boothhana.api.ApiModels.EventBoothInput;
 import com.boothhana.api.ApiModels.LineInput;
 import com.boothhana.api.ApiModels.NoticeInput;
 import com.boothhana.api.ApiModels.PosInput;
@@ -11,6 +12,7 @@ import com.boothhana.domain.Booth;
 import com.boothhana.domain.Event;
 import com.boothhana.domain.EventBooth;
 import com.boothhana.domain.EventProduct;
+import com.boothhana.domain.PosSale;
 import com.boothhana.domain.Reservation;
 import com.boothhana.domain.UserAccount;
 import com.boothhana.domain.DomainEnums.ApplicationStatus;
@@ -39,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -189,6 +192,84 @@ class PlatformServiceTests {
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().id()).isEqualTo(approved.id);
         assertThat(result.getFirst().status()).isEqualTo(ApplicationStatus.APPROVED);
+    }
+
+    @Test
+    void updatesOwnedApprovedEventBoothInformation() {
+        UserAccount owner = user();
+        owner.displayName = "크리에이터";
+        EventBooth eventBooth = stubOwnedEventBooth(owner, ApplicationStatus.APPROVED);
+        Event event = publishedEvent();
+        Booth booth = new Booth();
+        booth.id = eventBooth.boothId;
+        booth.ownerUserId = owner.id;
+        booth.name = "기본 부스";
+        when(events.findById(event.id)).thenReturn(Optional.of(event));
+        when(users.findById(owner.id)).thenReturn(Optional.of(owner));
+        when(eventBooths.save(eventBooth)).thenReturn(eventBooth);
+        when(eventProducts.findByEventBoothIdOrderByIdDesc(eventBooth.id)).thenReturn(List.of());
+        when(notices.findByEventBoothIdOrderByPinnedDescCreatedAtDesc(eventBooth.id)).thenReturn(List.of());
+
+        var view = service.updateEventBooth(owner, eventBooth.id, new EventBoothInput(" A-17 ", "행사 소개", false));
+
+        assertThat(view.boothNumber()).isEqualTo("A-17");
+        assertThat(view.intro()).isEqualTo("행사 소개");
+        assertThat(view.isPublic()).isFalse();
+        verify(eventBooths).save(eventBooth);
+    }
+
+    @Test
+    void deletesUnusedOwnedEventBoothButKeepsBaseBooth() {
+        UserAccount owner = user();
+        EventBooth eventBooth = stubOwnedEventBooth(owner, ApplicationStatus.APPROVED);
+        Event event = publishedEvent();
+        when(events.findById(event.id)).thenReturn(Optional.of(event));
+        when(eventProducts.findByEventBoothIdOrderByIdDesc(eventBooth.id)).thenReturn(List.of());
+        when(notices.findByEventBoothIdOrderByPinnedDescCreatedAtDesc(eventBooth.id)).thenReturn(List.of());
+
+        service.deleteEventBooth(owner, eventBooth.id);
+
+        verify(eventBooths).delete(eventBooth);
+        verify(booths, never()).delete(any(Booth.class));
+    }
+
+    @Test
+    void rejectsEventBoothDeletionWhenReservationsExist() {
+        UserAccount owner = user();
+        EventBooth eventBooth = stubOwnedEventBooth(owner, ApplicationStatus.APPROVED);
+        Event event = publishedEvent();
+        when(events.findById(event.id)).thenReturn(Optional.of(event));
+        when(reservations.countByEventBoothId(eventBooth.id)).thenReturn(1L);
+
+        assertThatThrownBy(() -> service.deleteEventBooth(owner, eventBooth.id))
+            .isInstanceOf(ApiException.class)
+            .hasMessage("예약 또는 판매가 연결된 행사 부스는 삭제할 수 없습니다.");
+
+        verify(eventBooths, never()).delete(eventBooth);
+    }
+
+    @Test
+    void returnsOwnedPosSaleDetail() {
+        UserAccount owner = user();
+        Booth booth = new Booth();
+        booth.id = 21L;
+        booth.ownerUserId = owner.id;
+        EventBooth eventBooth = new EventBooth();
+        eventBooth.id = 31L;
+        eventBooth.boothId = booth.id;
+        PosSale sale = new PosSale();
+        sale.id = 41L;
+        sale.eventBoothId = eventBooth.id;
+        sale.saleNo = "POS-TEST-001";
+        when(booths.findByOwnerUserIdOrderByIdDesc(owner.id)).thenReturn(List.of(booth));
+        when(eventBooths.findByBoothIdIn(List.of(booth.id))).thenReturn(List.of(eventBooth));
+        when(posSales.findById(sale.id)).thenReturn(Optional.of(sale));
+        when(posItems.findByPosSaleId(sale.id)).thenReturn(List.of());
+
+        var view = service.posSale(owner, sale.id);
+
+        assertThat(view.id()).isEqualTo(sale.id);
+        assertThat(view.saleNo()).isEqualTo("POS-TEST-001");
     }
 
     @Test

@@ -1,6 +1,6 @@
 # BoothHana2 QA Report
 
-- Date: 2026-08-10
+- Date: 2026-08-10 to 2026-08-12
 - Target: http://localhost:5173
 - Tier: Standard
 - Mode: diff-aware

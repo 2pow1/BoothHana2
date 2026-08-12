@@ -39,7 +39,7 @@ src/types.ts      API 응답과 화면에서 공유하는 TypeScript 타입
 
 ## Routes
 
-- 공개·팬: `/`, `/login`, `/events`, `/events/:eventId`, `/booths/:boothId`, `/products/:productId`, `/reservations`
+- 공개·팬: `/`, `/login`, `/events`, `/events/:eventId`, `/booths/:boothId`, `/products/:productId`, `/booths/:boothId/reserve`, `/reservations`, `/reservations/:reservationId`
 - 크리에이터: `/creator/events`, `/creator/booths`, `/creator/event-booths/:eventBoothId/products`, `/creator/reservations`, `/creator/pos`, `/creator/notices`
 - 관리자: `/admin/events`, `/admin/events/:eventId`, `/admin/applications`
 

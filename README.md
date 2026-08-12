@@ -18,7 +18,9 @@
 
 - [승인된 Lean CRUD 계획](docs/plans/2026-08-07-booth-platform-lean-crud-plan.md)
 - [프로토타입 역기획 및 불일치 분석](docs/analysis/2026-08-09-prototype-reverse-analysis.md)
+- [로컬 QA 보고서](docs/qa/2026-08-10-localhost-qa-report.md)
 - [프런트엔드 개발 안내](frontend/README.md)
+- [백엔드 개발 안내](backend/README.md)
 
 ## Stack
 
@@ -35,7 +37,7 @@ frontend/       React 화면, 라우팅, API client, 스타일
 backend/        Spring Boot API, 인증, 도메인 서비스, 테스트
 database/       운영 순서의 SQL 마이그레이션
 database/dev/   수동 실행하는 개발 전용 mock seed
-docs/           승인 계획과 분석 기록
+docs/           승인 계획, 역기획 분석과 QA 기록
 ```
 
 ## Local setup
@@ -71,6 +73,23 @@ http://localhost:8080/login/oauth2/code/kakao
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | R2 서명 업로드와 공개 이미지 URL |
 | `SESSION_COOKIE_SECURE`, `SESSION_COOKIE_SAME_SITE` | 로컬·배포 환경의 세션 쿠키 정책 |
 
+#### 로컬 관리자 권한 부여
+
+1. 관리자용 카카오 계정으로 한 번 로그인해 `app_user`를 생성합니다.
+2. Supabase SQL Editor에서 계정의 `kakao_subject`를 확인합니다.
+
+```sql
+select id, kakao_subject, display_name, created_at
+from app_user
+order by created_at desc;
+```
+
+3. 해당 값을 `backend/.env`의 `ADMIN_KAKAO_SUBJECT`에 입력합니다.
+4. 백엔드를 재기동하고 브라우저에서 로그아웃한 뒤 같은 카카오 계정으로 다시 로그인합니다.
+5. `/api/me`의 `permissions`에 `ADMIN`이 포함되고 `/admin/events`에 접근되는지 확인합니다.
+
+`ADMIN_KAKAO_SUBJECT`는 백엔드 시작 시 읽히므로 `.env` 변경만으로 실행 중인 서버 권한이 바뀌지는 않습니다.
+
 ### 3. Backend
 
 Spring Boot는 프로젝트의 `.env` 파일을 자동으로 읽지 않습니다. 로컬 개발 스크립트가 `backend/.env`를 현재 프로세스에 불러온 뒤 서버를 실행합니다.
@@ -89,11 +108,20 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\run-dev.ps1
 ```
 
+`Web server failed to start. Port 8080 was already in use.`가 표시되면 기존 백엔드가 이미 실행 중인지 확인합니다.
+
+```powershell
+Get-NetTCPConnection -LocalPort 8080 -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess
+```
+
+기존 서버를 실행한 터미널에서 종료한 뒤 `run-dev.ps1`을 다시 실행합니다. 서로 다른 환경 변수로 백엔드를 중복 실행하지 않습니다.
+
 ### 4. Frontend
 
 다른 터미널에서 `frontend`로 이동해 실행합니다.
 
 ```powershell
+cd frontend
 pnpm install
 pnpm dev
 ```
@@ -119,7 +147,7 @@ pnpm lint
 pnpm build
 
 cd ../backend
-./gradlew.bat test
+.\run-dev.ps1 test
 ```
 
 실제 브라우저에서는 카카오 로그인, 팬·크리에이터 화면 전환, 저장 후 새로고침, 예약 상태, Creator 예약·POS·공지 화면을 확인합니다.
@@ -136,8 +164,8 @@ cd ../backend
 
 ## Known limitations
 
-- Creator 행사 목록은 아직 로그인 사용자의 참가 신청 상태를 조회하지 않습니다. 공개 행사에는 신청 후에도 `참가 신청` 버튼이 활성화되고, 다시 누르면 서버가 중복 신청을 차단합니다.
 - 기본 부스가 여러 개이면 참가 신청 화면이 부스를 선택하게 하지 않고 목록의 첫 번째 부스를 사용합니다.
+- 승인 계획에 포함된 행사별 부스 정보 수정·삭제 화면과 POS 판매 단건 상세 화면은 아직 구현되지 않았습니다. 현재는 행사별 부스 조회와 POS 판매 목록·생성·취소를 제공합니다.
 - Vercel·Render 설정 파일은 포함되어 있지만 실제 공개 Preview 환경의 전체 흐름 검증은 아직 완료되지 않았습니다.
 
 ## Deployment configuration

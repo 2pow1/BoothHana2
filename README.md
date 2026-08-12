@@ -73,18 +73,21 @@ http://localhost:8080/login/oauth2/code/kakao
 
 ### 3. Backend
 
-Spring Boot는 프로젝트의 `.env` 파일을 자동으로 읽지 않습니다. PowerShell에서 `backend`로 이동한 뒤 현재 프로세스에 값을 불러오고 서버를 실행합니다.
+Spring Boot는 프로젝트의 `.env` 파일을 자동으로 읽지 않습니다. 로컬 개발 스크립트가 `backend/.env`를 현재 프로세스에 불러온 뒤 서버를 실행합니다.
 
 ```powershell
-Get-Content .env | ForEach-Object {
-  if ($_ -match '^\s*([^#][^=]*)=(.*)$') {
-    Set-Item -Path "Env:$($matches[1].Trim())" -Value $matches[2].Trim()
-  }
-}
-./gradlew.bat bootRun
+cd backend
+.\run-dev.ps1
 ```
 
 백엔드는 기본적으로 `http://localhost:8080`에서 실행됩니다.
+
+PowerShell 실행 정책으로 스크립트가 차단되면 현재 터미널에서만 다음과 같이 허용한 뒤 다시 실행합니다.
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\run-dev.ps1
+```
 
 ### 4. Frontend
 

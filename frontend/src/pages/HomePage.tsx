@@ -1,0 +1,18 @@
+import { Link } from 'react-router'
+
+const goods = [
+  ['moon-rabbit-keychains.png', '예약 가능', '문래빗 아크릴 키링 세트', 'BU-SCW26-MLG · A-17 · 달빛상점', '12,000원'],
+  ['pixel-cat-stickers.png', '예약 가능', '픽셀캣 스티커 팩', 'BU-SCW26-PXP · C-11 · Pixel Post', '9,000원'],
+  ['summer-cat-pouch.png', '현장 판매', '써머캣 패브릭 파우치', 'Blue Soda · D-02', '15,000원'],
+  ['star-courier-posters.png', '12개 남음', '별빛문구 포스터 세트', 'BU-SCW26-NST · B-04 · 별빛문구', '18,000원'],
+]
+
+export function HomePage() {
+  return <>
+    <section className="hero section-pad"><div className="hero-copy"><p className="eyebrow">Offline Goods Fair</p><h1>굿즈 부스를 고르는<br />새로운 행사 매거진</h1><p className="lead">행사, 크리에이터 부스, 예약 가능한 굿즈를 한 화면에서 탐색하고 현장에서 빠르게 수령하세요.</p><form className="hero-search" action="/events"><input className="input" type="search" name="q" aria-label="행사 검색" placeholder="행사와 부스를 찾아보세요" /><button className="btn primary">검색</button></form><div className="hero-metrics"><span>예약 굿즈 <strong>128개</strong></span><span>품절 임박 <strong>14개</strong></span><span>서울 코믹월드 <strong>진행중</strong></span></div></div><div className="hero-collage" aria-label="추천 굿즈 이미지">{goods.map(([image, , title], index) => <img key={image} className={`collage-${index + 1}`} src={`/assets/boothup/${image}`} alt={title} />)}</div></section>
+    <section className="section section-pad"><div className="section-heading"><div><p className="eyebrow">Today Goods</p><h2>오늘 확인할 캐릭터 굿즈</h2><p className="section-description">실제 굿즈처럼 보이도록 캐릭터 이미지 중심으로 구성했습니다.</p></div><Link className="btn secondary" to="/events">굿즈 전체</Link></div><div className="product-grid">{goods.map(([image, status, title, meta, price]) => <Link className="product-card" to="/events" key={title}><div className="image"><img src={`/assets/boothup/${image}`} alt={title} /></div><div className="product-card-body"><span className={`chip ${status === '현장 판매' ? 'muted' : 'active'}`}>{status}</span><h3>{title}</h3><p className="item-meta">{meta}</p><p className="price">{price}</p></div></Link>)}</div></section>
+    <section className="feature-band section-pad"><div><p className="eyebrow">Goods Guide</p><h2>취향과 예산으로 굿즈 찾기</h2><p className="lead">캐릭터, 가격, 예약 가능 여부를 기준으로 행사장에서 볼 상품을 빠르게 좁힙니다.</p></div><div className="button-row"><Link className="btn primary" to="/events">굿즈 탐색</Link><Link className="btn secondary" to="/events">행사 보기</Link></div></section>
+    <section className="section section-pad"><div className="section-heading"><div><p className="eyebrow">Events</p><h2>행사</h2><p className="section-description">진행중 행사와 진행 예정 행사를 확인하세요.</p></div><Link className="btn secondary" to="/events">행사 전체</Link></div><div className="editorial-columns"><div><h3 className="column-title">진행중 행사</h3><article className="editorial-event"><span className="chip active">진행중</span><h3>서울 코믹월드 2026</h3><p>COEX HALL C · 참가 부스 184개</p><Link to="/events">행사 살펴보기 →</Link></article></div><div><h3 className="column-title">진행 예정 행사</h3><article className="editorial-event soft"><span className="chip muted">예정</span><h3>서울 디자인 굿즈 데이</h3><p>DDP 아트홀 · 참가 모집중</p><Link to="/events">일정 확인하기 →</Link></article></div></div></section>
+    <section className="section section-pad creators-section"><div className="section-heading"><div><p className="eyebrow">Creators</p><h2>인기 크리에이터</h2><p className="section-description">예약 가능한 대표 굿즈와 참여 행사를 함께 보여줍니다.</p></div></div><div className="creator-grid">{goods.map(([image, status, title], index) => <article className="creator-card" key={title}><div className="avatar"><img src={`/assets/boothup/${image}`} alt="" /></div><h3>{['Moonlit Goods', 'Pixel Post', 'Blue Soda', 'Night Stationery'][index]}</h3><p className="item-meta">{title}</p><span className="chip muted">{status}</span></article>)}</div></section>
+  </>
+}

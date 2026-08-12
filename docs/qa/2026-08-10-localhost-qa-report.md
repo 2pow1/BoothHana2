@@ -91,6 +91,11 @@ QA found 2 issues, fixed and browser-verified both, with scoped health improving
 - Scope: event-booth information update/delete and POS sale detail
 - Frontend: Oxlint and TypeScript production build passed
 - Backend: full Gradle test suite passed, including update, safe delete, delete-blocking, and owned POS detail tests
-- Browser: the controllable local tabs had no active Kakao session, so authenticated visual interaction was not re-run in this pass
+- Browser: Kakao re-login succeeded after restarting the latest backend; authenticated visual interaction was re-run
+- Event booth: existing values loaded, unchanged save succeeded, and the same values remained after a full reload
+- Ended event booth: read-only notice displayed and inputs, delete, and save actions were disabled
+- POS detail: canceled and sold records both loaded through the single-sale endpoint with sale time, payment method, item, quantity, unit price, line amount, and total
+- Responsive: the event-booth form was checked at desktop width and the POS detail at mobile width; the wide POS table remained inside its horizontal scroll container
 - Safety: destructive delete was verified at the service-test level only; no local user data was deleted
-- Remaining: authenticated visual QA and the public Vercel/Render preview flow
+- Errors: no application error state or backend 5xx response occurred in the exercised flow
+- Remaining: the public Vercel/Render preview flow

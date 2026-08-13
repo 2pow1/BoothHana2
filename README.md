@@ -6,7 +6,7 @@
 
 - 카카오 OAuth 로그인으로 바로 진입하며 로그인 전 팬·크리에이터 선택 화면은 없습니다.
 - 모든 로그인 사용자는 `FAN`, `CREATOR` 기능 권한을 함께 사용하고 두 화면을 자유롭게 전환합니다.
-- `ADMIN_KAKAO_SUBJECT`와 일치하는 카카오 계정에만 `ADMIN` 권한이 추가됩니다.
+- `ADMIN_KAKAO_SUBJECTS`에 쉼표로 지정한 카카오 계정에만 `ADMIN` 권한이 추가됩니다.
 - 팬은 공개 행사·부스·상품 조회, 예약 생성·조회·취소를 사용할 수 있습니다.
 - 크리에이터는 기본 부스, 행사 참가 신청, 행사별 부스 정보, 상품·재고, 공지, 예약 수령과 간단 POS 기록·상세를 관리합니다.
 - 관리자는 행사 CRUD·공개·종료와 참가 신청 승인·반려만 관리합니다.
@@ -70,7 +70,7 @@ http://localhost:8080/login/oauth2/code/kakao
 | `FRONTEND_URL` | 로그인 성공 후 돌아갈 프런트 주소 |
 | `ALLOWED_ORIGINS` | 쿠키를 포함한 API 요청을 허용할 프런트 주소. 여러 개면 쉼표로 구분 |
 | `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET` | 개발용 Kakao Developers 앱 |
-| `ADMIN_KAKAO_SUBJECT` | 추가 관리자 권한을 받을 카카오 사용자 ID |
+| `ADMIN_KAKAO_SUBJECTS` | 추가 관리자 권한을 받을 카카오 사용자 ID. 여러 명이면 쉼표로 구분 |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | R2 서명 업로드와 공개 이미지 URL |
 | `SESSION_COOKIE_SECURE`, `SESSION_COOKIE_SAME_SITE` | 로컬·배포 환경의 세션 쿠키 정책 |
 
@@ -85,11 +85,11 @@ from app_user
 order by created_at desc;
 ```
 
-3. 해당 값을 `backend/.env`의 `ADMIN_KAKAO_SUBJECT`에 입력합니다.
+3. 해당 값을 `backend/.env`의 `ADMIN_KAKAO_SUBJECTS`에 입력합니다. 여러 명이면 `123456789,987654321`처럼 쉼표로 구분합니다.
 4. 백엔드를 재기동하고 브라우저에서 로그아웃한 뒤 같은 카카오 계정으로 다시 로그인합니다.
 5. `/api/me`의 `permissions`에 `ADMIN`이 포함되고 `/admin/events`에 접근되는지 확인합니다.
 
-`ADMIN_KAKAO_SUBJECT`는 백엔드 시작 시 읽히므로 `.env` 변경만으로 실행 중인 서버 권한이 바뀌지는 않습니다.
+`ADMIN_KAKAO_SUBJECTS`는 백엔드 시작 시 읽히므로 `.env` 변경만으로 실행 중인 서버 권한이 바뀌지는 않습니다. 기존 `ADMIN_KAKAO_SUBJECT`도 배포 전환을 위해 단일 관리자 값으로 계속 인식하지만 새 설정에는 복수형 변수를 사용합니다.
 
 ### 3. Backend
 

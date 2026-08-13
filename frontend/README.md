@@ -39,8 +39,8 @@ src/types.ts      API 응답과 화면에서 공유하는 TypeScript 타입
 
 ## Routes
 
-- 공개·팬: `/`, `/login`, `/events`, `/events/:eventId`, `/booths/:boothId`, `/products/:productId`, `/reservations`
-- 크리에이터: `/creator/events`, `/creator/booths`, `/creator/event-booths/:eventBoothId/products`, `/creator/reservations`, `/creator/pos`, `/creator/notices`
+- 공개·팬: `/`, `/login`, `/events`, `/events/:eventId`, `/booths/:boothId`, `/products/:productId`, `/booths/:boothId/reserve`, `/reservations`, `/reservations/:reservationId`
+- 크리에이터: `/creator/events`, `/creator/booths`, `/creator/event-booths/:eventBoothId`, `/creator/event-booths/:eventBoothId/products`, `/creator/reservations`, `/creator/pos`, `/creator/notices`
 - 관리자: `/admin/events`, `/admin/events/:eventId`, `/admin/applications`
 
 모든 로그인 사용자는 팬·크리에이터 화면을 함께 사용할 수 있습니다. 관리자 화면은 백엔드가 `/api/me`에 `ADMIN` 권한을 반환하는 지정 카카오 계정만 접근할 수 있습니다.

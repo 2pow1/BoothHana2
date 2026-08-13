@@ -40,7 +40,7 @@ server:
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
-  admin-kakao-subject: ${ADMIN_KAKAO_SUBJECT:}
+  admin-kakao-subjects: ${ADMIN_KAKAO_SUBJECTS:${ADMIN_KAKAO_SUBJECT:}}
   r2:
     account-id: ${R2_ACCOUNT_ID:}
     access-key: ${R2_ACCESS_KEY_ID:}

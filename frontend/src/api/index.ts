@@ -40,6 +40,9 @@ export const creatorApi = {
   events: () => api<EventSummary[]>('/api/creator/events'),
   booths: () => api<BoothSummary[]>('/api/creator/booths'),
   eventBooths: () => api<BoothSummary[]>('/api/creator/event-booths'),
+  updateEventBooth: (id: number, body: Pick<BoothSummary, 'boothNumber' | 'intro' | 'isPublic'>) =>
+    api<BoothSummary>(`/api/creator/event-booths/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteEventBooth: (id: number) => api<void>(`/api/creator/event-booths/${id}`, { method: 'DELETE' }),
   createBooth: (body: Partial<BoothSummary>) =>
     api<BoothSummary>('/api/creator/booths', { method: 'POST', body: JSON.stringify(body) }),
   updateBooth: (id: number, body: Partial<BoothSummary>) =>
@@ -65,6 +68,7 @@ export const creatorApi = {
   reservationByNumber: (value: string) => api<Reservation>(`/api/creator/reservations/by-number/${encodeURIComponent(value)}`),
   pickup: (id: number) => api<Reservation>(`/api/creator/reservations/${id}/pickup`, { method: 'POST' }),
   posSales: () => api<PosSale[]>('/api/creator/pos-sales'),
+  posSale: (id: number) => api<PosSale>(`/api/creator/pos-sales/${id}`),
   createPosSale: (eventBoothId: number, paymentMethod: string, items: ReservationItem[]) =>
     api<PosSale>('/api/creator/pos-sales', { method: 'POST', body: JSON.stringify({ eventBoothId, paymentMethod, items }) }),
   cancelPosSale: (id: number) => api<PosSale>(`/api/creator/pos-sales/${id}/cancel`, { method: 'POST' }),

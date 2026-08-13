@@ -1,6 +1,6 @@
 # BoothHana2 QA Report
 
-- Date: 2026-08-10
+- Date: 2026-08-10 to 2026-08-12
 - Target: http://localhost:5173
 - Tier: Standard
 - Mode: diff-aware
@@ -85,3 +85,17 @@
 ## PR Summary
 
 QA found 2 issues, fixed and browser-verified both, with scoped health improving from 97 to 100.
+
+## Supplemental Verification - 2026-08-12
+
+- Scope: event-booth information update/delete and POS sale detail
+- Frontend: Oxlint and TypeScript production build passed
+- Backend: 23 Gradle tests passed, including update, safe delete, reservation/POS delete-blocking, owned/unauthorized POS detail, and POS item/total mapping
+- Browser: Kakao re-login succeeded after restarting the latest backend; authenticated visual interaction was re-run
+- Event booth: existing values loaded, unchanged save succeeded, and the same values remained after a full reload
+- Ended event booth: read-only notice displayed and inputs, delete, and save actions were disabled
+- POS detail: canceled and sold records both loaded through the single-sale endpoint with sale time, payment method, item, quantity, unit price, line amount, and total
+- Responsive: the event-booth form was checked at desktop width and the POS detail at mobile width; the wide POS table remained inside its horizontal scroll container
+- Safety: destructive delete was verified at the service-test level only; no local user data was deleted
+- Errors: no application error state or backend 5xx response occurred in the exercised flow
+- Remaining: the public Vercel/Render preview flow

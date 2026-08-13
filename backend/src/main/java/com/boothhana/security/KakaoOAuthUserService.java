@@ -14,10 +14,14 @@ import java.util.*;
 @Service
 public class KakaoOAuthUserService extends DefaultOAuth2UserService {
     private final UserAccountRepository users;
-    private final String adminSubject;
+    private final Set<String> adminSubjects;
 
-    public KakaoOAuthUserService(UserAccountRepository users, @Value("${app.admin-kakao-subject:}") String adminSubject) {
-        this.users = users; this.adminSubject = adminSubject;
+    public KakaoOAuthUserService(UserAccountRepository users, @Value("${app.admin-kakao-subjects:}") String adminSubjects) {
+        this.users = users;
+        this.adminSubjects = Arrays.stream(adminSubjects.split(","))
+            .map(String::trim)
+            .filter(subject -> !subject.isBlank())
+            .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     @Override @Transactional
@@ -46,7 +50,7 @@ public class KakaoOAuthUserService extends DefaultOAuth2UserService {
         List<SimpleGrantedAuthority> result = new ArrayList<>();
         result.add(new SimpleGrantedAuthority("ROLE_FAN"));
         result.add(new SimpleGrantedAuthority("ROLE_CREATOR"));
-        if (!adminSubject.isBlank() && adminSubject.equals(subject)) result.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        if (adminSubjects.contains(subject)) result.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         return result;
     }
 }

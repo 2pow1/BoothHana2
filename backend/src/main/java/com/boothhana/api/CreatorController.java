@@ -18,6 +18,8 @@ public class CreatorController {
     @GetMapping("/events") public List<EventView> events(Authentication auth) { return service.creatorEvents(user(auth)); }
     @GetMapping("/booths") public List<BoothView> booths(Authentication auth) { return service.creatorBooths(user(auth)); }
     @GetMapping("/event-booths") public List<BoothView> eventBooths(Authentication auth) { return service.creatorEventBooths(user(auth)); }
+    @PatchMapping("/event-booths/{id}") public BoothView updateEventBooth(Authentication auth, @PathVariable Long id, @Valid @RequestBody EventBoothInput input) { return service.updateEventBooth(user(auth), id, input); }
+    @DeleteMapping("/event-booths/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void deleteEventBooth(Authentication auth, @PathVariable Long id) { service.deleteEventBooth(user(auth), id); }
     @PostMapping("/booths") @ResponseStatus(HttpStatus.CREATED) public BoothView createBooth(Authentication auth, @Valid @RequestBody BoothInput input) { return service.createBooth(user(auth), input); }
     @PatchMapping("/booths/{id}") public BoothView updateBooth(Authentication auth, @PathVariable Long id, @Valid @RequestBody BoothInput input) { return service.updateBooth(user(auth), id, input); }
     @DeleteMapping("/booths/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void deleteBooth(Authentication auth, @PathVariable Long id) { service.deleteBooth(user(auth), id); }
@@ -36,6 +38,7 @@ public class CreatorController {
     @GetMapping("/reservations/by-number/{number}") public ReservationView reservation(Authentication auth, @PathVariable String number) { return service.creatorReservationByNumber(user(auth), number); }
     @PostMapping("/reservations/{id}/pickup") public ReservationView pickup(Authentication auth, @PathVariable Long id) { return service.pickup(user(auth), id); }
     @GetMapping("/pos-sales") public List<PosView> posSales(Authentication auth) { return service.posSales(user(auth)); }
+    @GetMapping("/pos-sales/{id}") public PosView posSale(Authentication auth, @PathVariable Long id) { return service.posSale(user(auth), id); }
     @PostMapping("/pos-sales") public PosView createPos(Authentication auth, @Valid @RequestBody PosInput input) { return service.createPos(user(auth), input); }
     @PostMapping("/pos-sales/{id}/cancel") public PosView cancelPos(Authentication auth, @PathVariable Long id) { return service.cancelPos(user(auth), id); }
     private UserAccount user(Authentication auth) { return current.require(auth); }

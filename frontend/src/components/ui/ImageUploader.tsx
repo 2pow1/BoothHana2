@@ -21,7 +21,8 @@ export function ImageUploader({ currentUrl, target, onUploaded }: ImageUploaderP
       onUploaded(await uploadApi.image(file, target))
       setStatus('idle')
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : '업로드하지 못했습니다.')
+      const message = error instanceof Error ? error.message.trim() : ''
+      setErrorMessage(message || '업로드하지 못했습니다.')
       setStatus('error')
     }
   }

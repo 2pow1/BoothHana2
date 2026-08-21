@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, ApiError } from './client'
 import type {
   BoothNotice,
   BoothSummary,
@@ -99,10 +99,18 @@ export const adminApi = {
 
 export const uploadApi = {
   async image(file: File, target: 'booth' | 'product'): Promise<string> {
-    const signed = await api<{ uploadUrl: string; objectKey: string }>('/api/creator/uploads/presign', {
-      method: 'POST',
-      body: JSON.stringify({ fileName: file.name, contentType: file.type, target }),
-    })
+    let signed: { uploadUrl: string; objectKey: string }
+    try {
+      signed = await api<{ uploadUrl: string; objectKey: string }>('/api/creator/uploads/presign', {
+        method: 'POST',
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, target }),
+      })
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`이미지 업로드 URL 발급 실패 (${error.status}/${error.code})`)
+      }
+      throw error
+    }
     const response = await fetch(signed.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
     if (!response.ok) {
       const detail = await response.text().catch(() => '')

@@ -19,6 +19,8 @@ class R2UploadServiceTests {
         assertThat(upload.objectKey()).startsWith("product/42/").endsWith(".png");
         assertThat(upload.uploadUrl())
             .contains("X-Amz-Algorithm=AWS4-HMAC-SHA256")
-            .doesNotContainIgnoringCase("x-amz-checksum");
+            .contains("X-Amz-SignedHeaders=content-type%3Bhost")
+            .doesNotContainIgnoringCase("x-amz-checksum")
+            .doesNotContainIgnoringCase("x-amz-sdk-checksum");
     }
 }

@@ -104,7 +104,11 @@ export const uploadApi = {
       body: JSON.stringify({ fileName: file.name, contentType: file.type, target }),
     })
     const response = await fetch(signed.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
-    if (!response.ok) throw new Error('이미지를 업로드하지 못했습니다.')
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '')
+      const errorCode = detail.match(/<Code>([^<]+)<\/Code>/)?.[1]
+      throw new Error(`이미지 업로드 실패 (${response.status}${errorCode ? `/${errorCode}` : ''})`)
+    }
     return signed.objectKey
   },
 }

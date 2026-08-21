@@ -32,7 +32,7 @@ public class R2UploadService {
         String key = input.target() + "/" + ownerId + "/" + UUID.randomUUID() + extension.toLowerCase(Locale.ROOT);
         try (S3Presigner presigner = S3Presigner.builder().endpointOverride(URI.create("https://" + accountId + ".r2.cloudflarestorage.com"))
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))).region(Region.of("auto"))
-                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).checksumValidationEnabled(false).build()).build()) {
+                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build()).build()) {
             PutObjectRequest put = PutObjectRequest.builder().bucket(bucket).key(key).contentType(input.contentType()).build();
             String url = presigner.presignPutObject(PutObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(10)).putObjectRequest(put).build()).url().toString();
             return new UploadView(url, key);

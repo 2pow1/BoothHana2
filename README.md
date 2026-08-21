@@ -20,6 +20,7 @@
 - [승인된 Lean CRUD 계획](docs/plans/2026-08-07-booth-platform-lean-crud-plan.md)
 - [프로토타입 역기획 및 불일치 분석](docs/analysis/2026-08-09-prototype-reverse-analysis.md)
 - [로컬 QA 보고서](docs/qa/2026-08-10-localhost-qa-report.md)
+- [공개 배포 QA 보고서](docs/qa/2026-08-21-deployment-qa-report.md)
 - [프런트엔드 개발 안내](frontend/README.md)
 - [백엔드 개발 안내](backend/README.md)
 
@@ -73,6 +74,15 @@ http://localhost:8080/login/oauth2/code/kakao
 | `ADMIN_KAKAO_SUBJECTS` | 추가 관리자 권한을 받을 카카오 사용자 ID. 여러 명이면 쉼표로 구분 |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | R2 서명 업로드와 공개 이미지 URL |
 | `SESSION_COOKIE_SECURE`, `SESSION_COOKIE_SAME_SITE` | 로컬·배포 환경의 세션 쿠키 정책 |
+
+#### R2 개발용 API 키 갱신
+
+Cloudflare Dashboard의 **R2 Object Storage → Manage R2 API Tokens**에서 `BoothHana2 Dev Backend` 토큰을 생성하거나 Roll한 뒤, 한 번만 표시되는 값을 다음 위치에 각각 반영합니다.
+
+- 로컬: `backend/.env`의 `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
+- 공개 개발계: Render 서비스의 같은 이름의 Environment Variables
+
+키 값은 프런트엔드 환경 변수나 문서에 넣지 않으며 Git에 커밋하지 않습니다. 로컬 값을 바꾼 뒤에는 실행 중인 백엔드를 종료하고 `backend/run-dev.ps1`로 재기동해야 합니다. 토큰을 Roll하면 이전 키는 더 이상 사용할 수 없으므로 로컬과 Render를 함께 갱신합니다.
 
 #### 로컬 관리자 권한 부여
 
@@ -166,7 +176,8 @@ cd ../backend
 ## Known limitations
 
 - 기본 부스가 여러 개이면 참가 신청 화면이 부스를 선택하게 하지 않고 목록의 첫 번째 부스를 사용합니다.
-- Vercel·Render 설정 파일은 포함되어 있지만 실제 공개 Preview 환경의 전체 흐름 검증은 아직 완료되지 않았습니다.
+- Render 무료 인스턴스가 잠든 동안 카카오 동의 화면을 오래 열어 두면 OAuth callback 시점에 인스턴스를 다시 깨우면서 일회성 인증 코드가 만료될 수 있습니다. 이 경우 백엔드가 깨어난 뒤 로그인을 다시 시도합니다.
+- 공개 배포 환경에서는 로그인·팬 조회/예약 목록·Creator 주요 화면·관리자 조회/입력 화면과 R2 이미지 업로드·상품 저장·새로고침 후 이미지 유지까지 검증했습니다.
 
 ## Deployment configuration
 
@@ -174,3 +185,4 @@ cd ../backend
 - Render: 루트의 `render.yaml`과 `backend/Dockerfile`을 사용하고 `backend/.env.example`에 나열된 비밀 환경 변수를 등록합니다.
 - Supabase: `database` 루트의 번호 있는 SQL만 순서대로 적용합니다.
 - Cloudflare R2: 버킷 CORS에서 프런트 도메인의 `PUT`을 허용하고 공개 이미지 URL을 `R2_PUBLIC_URL`에 지정합니다.
+- Vercel과 Render처럼 프런트와 백엔드가 서로 다른 사이트이면 Render에서 `SESSION_COOKIE_SECURE=true`, `SESSION_COOKIE_SAME_SITE=none`을 사용합니다. CSRF 쿠키도 같은 정책을 따릅니다.

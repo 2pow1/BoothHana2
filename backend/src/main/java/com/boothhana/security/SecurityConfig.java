@@ -15,9 +15,12 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain security(HttpSecurity http, KakaoOAuthUserService oauthUsers,
             @Qualifier("cors") CorsConfigurationSource corsSource,
-            @Value("${app.frontend-url}") String frontendUrl) throws Exception {
+            @Value("${app.frontend-url}") String frontendUrl,
+            @Value("${server.servlet.session.cookie.secure:false}") boolean cookieSecure,
+            @Value("${server.servlet.session.cookie.same-site:lax}") String cookieSameSite) throws Exception {
         CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrf.setCookiePath("/");
+        csrf.setCookieCustomizer(cookie -> cookie.secure(cookieSecure).sameSite(cookieSameSite));
         http.cors(cors -> cors.configurationSource(corsSource)).csrf(config -> config.csrfTokenRepository(csrf))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

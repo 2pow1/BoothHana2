@@ -20,6 +20,7 @@
 - [승인된 Lean CRUD 계획](docs/plans/2026-08-07-booth-platform-lean-crud-plan.md)
 - [프로토타입 역기획 및 불일치 분석](docs/analysis/2026-08-09-prototype-reverse-analysis.md)
 - [로컬 QA 보고서](docs/qa/2026-08-10-localhost-qa-report.md)
+- [공개 배포 QA 보고서](docs/qa/2026-08-21-deployment-qa-report.md)
 - [프런트엔드 개발 안내](frontend/README.md)
 - [백엔드 개발 안내](backend/README.md)
 
@@ -166,7 +167,8 @@ cd ../backend
 ## Known limitations
 
 - 기본 부스가 여러 개이면 참가 신청 화면이 부스를 선택하게 하지 않고 목록의 첫 번째 부스를 사용합니다.
-- Vercel·Render 설정 파일은 포함되어 있지만 실제 공개 Preview 환경의 전체 흐름 검증은 아직 완료되지 않았습니다.
+- Render 무료 인스턴스가 잠든 동안 카카오 동의 화면을 오래 열어 두면 OAuth callback 시점에 인스턴스를 다시 깨우면서 일회성 인증 코드가 만료될 수 있습니다. 이 경우 백엔드가 깨어난 뒤 로그인을 다시 시도합니다.
+- 공개 배포 환경에서는 로그인·팬 조회/예약 목록·Creator 주요 화면·관리자 조회/입력 화면까지 검증했습니다. R2에 실제 파일을 새로 쓰는 업로드와 데이터 변경 작업은 별도 승인 후 검증합니다.
 
 ## Deployment configuration
 

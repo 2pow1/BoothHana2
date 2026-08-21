@@ -61,7 +61,7 @@
 
 ## Final Admin QA - 2026-08-12
 
-- Account: designated Kakao account configured through `ADMIN_KAKAO_SUBJECT`
+- Account: designated Kakao account configured through `ADMIN_KAKAO_SUBJECTS`
 - Route: `/admin/events` and `/admin/events/new`
 - Access: `ADMIN` console access verified after backend restart and Kakao re-login
 - Input: event name, event period, reservation period, venue, description, and DRAFT status
@@ -98,4 +98,4 @@ QA found 2 issues, fixed and browser-verified both, with scoped health improving
 - Responsive: the event-booth form was checked at desktop width and the POS detail at mobile width; the wide POS table remained inside its horizontal scroll container
 - Safety: destructive delete was verified at the service-test level only; no local user data was deleted
 - Errors: no application error state or backend 5xx response occurred in the exercised flow
-- Remaining: the public Vercel/Render preview flow
+- Public deployment follow-up: completed for authentication, authorization, and major read/form routes on 2026-08-21; see `docs/qa/2026-08-21-deployment-qa-report.md`.

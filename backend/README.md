@@ -42,6 +42,7 @@ cd backend
 ## Local troubleshooting
 
 - `.env` 변경 후에는 백엔드를 재기동합니다.
+- R2 API 토큰을 Roll했으면 Cloudflare가 한 번만 보여 주는 Access Key ID와 Secret Access Key를 `backend/.env`의 `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`에 반영하고 Render의 같은 변수도 함께 갱신합니다. 값 자체는 Git이나 프런트 환경 변수에 두지 않습니다.
 - 관리자 권한 변경 후에는 카카오 로그아웃·재로그인으로 `/api/me`를 다시 확인합니다.
 - 8080 포트가 이미 사용 중이면 기존 백엔드 프로세스를 먼저 종료합니다.
 - 프런트 요청이 CORS로 차단되면 `ALLOWED_ORIGINS`에 실제 프런트 주소가 있는지 확인합니다.

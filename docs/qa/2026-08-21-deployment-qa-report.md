@@ -4,12 +4,12 @@
 - Frontend: https://booth-hana2.vercel.app
 - Backend: https://boothhana2-api.onrender.com
 - Environment: Vercel + Render + Supabase PostgreSQL
-- Mode: authenticated deployment smoke QA
-- Status: Pass with one infrastructure limitation and one deferred mutation check
+- Mode: authenticated deployment smoke and R2 mutation QA
+- Status: Pass with one infrastructure limitation
 
 ## Deployment and configuration
 
-- Render deployed merge commit `c4ff99b` successfully.
+- Render deployed backend commit `75b6f13` successfully after the cross-site CSRF cookie fix.
 - Render administrator configuration was migrated from `ADMIN_KAKAO_SUBJECT` to `ADMIN_KAKAO_SUBJECTS` without reading or copying the secret value.
 - The designated administrator logged in again after deployment and retained access to the Admin Console.
 - The same authenticated account could enter Fan, Creator, and Admin areas, matching the additive permission model.
@@ -23,6 +23,9 @@
 - Admin event list, participation applications, and event registration form opened successfully.
 - Admin event list loaded persisted DRAFT, PUBLISHED, and ENDED rows from Supabase.
 - Product edit UI exposed the intended JPG/PNG/WebP representative-image picker.
+- A PNG was uploaded from the Creator product edit screen through a backend-issued presigned URL to R2.
+- The product was saved, the page was reloaded, and the edit screen retained a non-blob R2 public image URL.
+- The persisted image loaded successfully after reload with a natural size of 1254 × 1254 pixels.
 
 ## Automated verification
 
@@ -38,10 +41,15 @@ The first callback attempt returned `/login?error` after the Kakao authorization
 
 This is recorded as a free-tier infrastructure limitation rather than an application crash. Normal prompt login was successful, but a user who pauses for a long time on the Kakao page may need to retry.
 
-### Deferred external mutations
+### R2 upload incident and resolution
 
-This pass did not submit a new event, change an existing row, or upload a new image object to R2. Those actions mutate the shared public development environment. The forms and image picker were verified, while the final R2 upload/save round trip remains pending explicit approval.
+The initial production upload failed in two stages:
+
+1. The cross-site CSRF cookie used its default `SameSite=Lax` behavior, so the deployed frontend's authenticated presign request was rejected. Commit `75b6f13` makes the CSRF cookie follow the deployed session cookie's `Secure` and `SameSite=None` policy.
+2. Render's stored R2 secret did not match the newly rolled Cloudflare token. The development token was rolled again, the old pair was invalidated, and both local `backend/.env` and Render were updated without recording the values in source or documentation.
+
+After redeployment, the presign request, direct R2 PUT, product save, reload, and public image fetch all succeeded.
 
 ## Result
 
-The deployed authentication, additive Fan/Creator permissions, plural administrator configuration, persisted reads, and major management routes are working. No code defect requiring a source change was found in this pass.
+The deployed authentication, additive Fan/Creator permissions, plural administrator configuration, persisted reads, major management routes, and R2 upload persistence are working. The cross-site CSRF defect was fixed and verified in production. The Render free-tier OAuth cold-start limitation remains documented.
